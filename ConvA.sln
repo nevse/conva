@@ -1,0 +1,16 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConvA", "ConvA\ConvA.csproj", "{87B2E2BF-755A-4E6D-BA1B-B07AB7FAFCDD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{87B2E2BF-755A-4E6D-BA1B-B07AB7FAFCDD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87B2E2BF-755A-4E6D-BA1B-B07AB7FAFCDD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87B2E2BF-755A-4E6D-BA1B-B07AB7FAFCDD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87B2E2BF-755A-4E6D-BA1B-B07AB7FAFCDD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal
