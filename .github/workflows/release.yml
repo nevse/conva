@@ -65,4 +65,4 @@ jobs:
           asset_content_type: application/octet-stream
       - name: Bump MyHomebrewTap
         run: |
-          echo "Bumping MyHomebrewTap {{ needs.release-please.outputs.tag_name}}"
+          echo "Bumping MyHomebrewTap ${{ needs.release-please.outputs.tag_name}}"
