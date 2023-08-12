@@ -13,7 +13,7 @@
         <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
         <DebugType>embedded</DebugType>
         <UseAppHost>true</UseAppHost>
-        <Version>0.0.1</Version>
+        <Version>0.0.0-dev-local</Version>
     </PropertyGroup>
 
     <ItemGroup>
