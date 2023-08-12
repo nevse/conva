@@ -3,6 +3,17 @@ name: dotnet package
 on: [push, pull_request]
 
 jobs:
+  main:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          release-type: simple
+          package-name: conva
+          extra-files: |
+                        conva/ConvA.csproj
   build:
     runs-on: ubuntu-latest
     steps:
