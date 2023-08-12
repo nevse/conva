@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.8](https://github.com/nevse/conva/compare/v0.1.7...v0.1.8) (2023-08-12)
+
+
+### Bug Fixes
+
+* bump brew installer ([68588b6](https://github.com/nevse/conva/commit/68588b69520d22c7535066040131a44defb2f48a))
+
 ## [0.1.7](https://github.com/nevse/conva/compare/v0.1.6...v0.1.7) (2023-08-12)
 
 
