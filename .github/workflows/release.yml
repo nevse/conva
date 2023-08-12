@@ -24,7 +24,7 @@ jobs:
             ConvA/ConvA.csproj
     
   build-release:
-    runs-on: ubuntu-20.04
+    runs-on: macos-latest
     needs: release-please
     if: ${{ needs.release-please.outputs.created }}
     steps:
@@ -39,7 +39,7 @@ jobs:
       - name: Build osx-arm64
         run: dotnet publish ConvA/ConvA.csproj -c Release -r osx-arm64 -o bin/darwin-arm64
       - name: Pack osx-arm64
-        run: tar -czvf conva-osx-arm64.tar.gz bin/darwin-arm64/ConvA
+        run: tar -czvf conva-darwin-arm64.tar.gz -C bin/darwin-arm64 .
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
