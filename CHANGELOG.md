@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.5](https://github.com/nevse/conva/compare/v0.1.4...v0.1.5) (2023-08-12)
+
+
+### Bug Fixes
+
+* fix release pipeline ([3996b89](https://github.com/nevse/conva/commit/3996b8908dceaab640129cb682a856d2ba580e92))
+
 ## [0.1.4](https://github.com/nevse/conva/compare/v0.1.3...v0.1.4) (2023-08-12)
 
 
