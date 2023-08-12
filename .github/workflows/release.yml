@@ -64,7 +64,7 @@ jobs:
           asset_path: ./conva-darwin-arm64.tar.gz
           asset_name: conva-darwin-arm64.tar.gz
           asset_content_type: application/octet-stream
-      - name: Bump MyHomebrewTap
+      - name: Bump Brew Cask
         env: 
           HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.TOKEN_PR }}
         run: |
