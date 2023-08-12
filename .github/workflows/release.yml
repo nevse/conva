@@ -8,6 +8,8 @@ on:
 jobs:
   release-please:
     runs-on: ubuntu-20.04
+    outputs:
+      created: ${{ steps.release.outputs.release_created }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
