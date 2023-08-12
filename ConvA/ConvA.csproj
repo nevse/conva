@@ -13,9 +13,9 @@
         <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
         <DebugType>embedded</DebugType>
         <UseAppHost>true</UseAppHost>
-<!-- x-release-please-start-version -->
+        <!--x-release-please-start-version-->
         <Version>0.0.1</Version>
-<!-- x-release-please-end -->
+        <!--x-release-please-end-->
     </PropertyGroup>
 
     <ItemGroup>

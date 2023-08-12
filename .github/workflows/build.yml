@@ -15,7 +15,7 @@ jobs:
           release-type: simple
           package-name: conva
           extra-files: |
-            conva/ConvA.csproj
+            ConvA/ConvA.csproj
   build:
     runs-on: ubuntu-latest
     steps:
