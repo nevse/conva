@@ -11,6 +11,7 @@ jobs:
     outputs:
       created: ${{ steps.release.outputs.release_created }}
       upload_url: ${{ steps.release.outputs.upload_url }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - name: Checkout
         uses: actions/checkout@v3
@@ -40,6 +41,19 @@ jobs:
         run: dotnet publish ConvA/ConvA.csproj -c Release -r osx-arm64 -o bin/darwin-arm64
       - name: Pack osx-arm64
         run: tar -czvf conva-darwin-arm64.tar.gz -C bin/darwin-arm64 .
+      - name: Build osx-amd64
+        run: dotnet publish ConvA/ConvA.csproj -c Release -r osx-amd64 -o bin/darwin-amd64
+      - name: Pack osx-amd64
+        run: tar -czvf conva-darwin-amd64.tar.gz -C bin/darwin-amd64 .
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.TOKEN_PR }}
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload_url }}
+          asset_path: ./conva-darwin-amd64.tar.gz
+          asset_name: conva-darwin-amd64.tar.gz
+          asset_content_type: application/octet-stream
       - name: Upload Release Asset
         uses: actions/upload-release-asset@v1
         env:
@@ -49,3 +63,6 @@ jobs:
           asset_path: ./conva-darwin-arm64.tar.gz
           asset_name: conva-darwin-arm64.tar.gz
           asset_content_type: application/octet-stream
+      - name: Bump MyHomebrewTap
+        run: |
+          echo "Bumping MyHomebrewTap {{ needs.release-please.outputs.tag_name}}"
