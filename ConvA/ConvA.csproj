@@ -14,7 +14,7 @@
         <DebugType>embedded</DebugType>
         <UseAppHost>true</UseAppHost>
         <!--x-release-please-start-version-->
-        <Version>0.1.6</Version>
+        <Version>0.1.7</Version>
         <!--x-release-please-end-->
     </PropertyGroup>
     <ItemGroup>
