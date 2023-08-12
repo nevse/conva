@@ -17,10 +17,7 @@
         <Version>0.0.1</Version>
         <!--x-release-please-end-->
     </PropertyGroup>
-
     <ItemGroup>
       <PackageReference Include="CommandLineParser" Version="2.9.1" />
     </ItemGroup>
-
-
 </Project>

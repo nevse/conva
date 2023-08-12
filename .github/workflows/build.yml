@@ -25,6 +25,6 @@ jobs:
         with:
           dotnet-version: '7.0.x'
       - name: Install dependencies
-        run: dotnet restore ConvA/ConvA.csproj 
+        run: dotnet restore ConvA/ConvA.csproj
       - name: Build
-        run: dotnet build ConvA/ConvA.csproj 
+        run: dotnet build ConvA/ConvA.csproj
