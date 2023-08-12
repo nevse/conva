@@ -11,6 +11,7 @@ jobs:
     outputs:
       created: ${{ steps.release.outputs.release_created }}
       upload_url: ${{ steps.release.outputs.upload_url }}
+      version: ${{ steps.release.outputs.major }}.${{ steps.release.outputs.minor }}.${{ steps.release.outputs.patch }}
       tag_name: ${{ steps.release.outputs.tag_name }}
     steps:
       - name: Checkout
@@ -64,5 +65,9 @@ jobs:
           asset_name: conva-darwin-arm64.tar.gz
           asset_content_type: application/octet-stream
       - name: Bump MyHomebrewTap
+        env: 
+          HOMEBREW_GITHUB_API_TOKEN: ${{ secrets.TOKEN_PR }}
         run: |
-          echo "Bumping MyHomebrewTap ${{ needs.release-please.outputs.tag_name}}"
+          echo "Bumping MyHomebrewTap ${{ needs.release-please.outputs.tag_name}} - ${{ needs.release-please.outputs.version }}"
+          brew tap nevse/tap
+          brew bump-cask-pr -f --no-browse --version="${{ needs.release-please.outputs.version }}" conva
