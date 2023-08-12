@@ -1,0 +1,46 @@
+name: Release Please
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release-please:
+    runs-on: ubuntu-20.04
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - uses: google-github-actions/release-please-action@v3
+        id: release
+        with:
+          token: ${{ secrets.TOKEN_PR }}
+          release-type: simple
+          package-name: conva
+          extra-files: |
+            ConvA/ConvA.csproj
+    
+  build-release:
+    runs-on: ubuntu-20.04
+    needs: release-please
+    if: ${{ needs.release-please.outputs.created }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: '7.0.x'
+      - name: Install dependencies
+        run: dotnet restore ConvA/ConvA.csproj
+      - name: Build osx-arm64
+        run: dotnet publish ConvA/ConvA.csproj -c Release -r osx-arm64 -o bin/darwin-arm64
+      - name: Pack osx-arm64
+        run: tar -czvf conva-osx-arm64.tar.gz bin/darwin-arm64/ConvA
+      - name: Upload Release Asset
+        uses: actions/upload-release-asset@v1
+        with:
+          upload_url: ${{ needs.release-please.outputs.upload_url }}
+          asset_path: ./conva-osx-arm64.tar.gz 
+          asset_name: conva-osx-arm64.tar.gz
+          asset_content_type: application/octet-stream
