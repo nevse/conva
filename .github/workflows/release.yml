@@ -40,10 +40,26 @@ jobs:
         run: dotnet restore ConvA/ConvA.csproj
       - name: Build osx-arm64
         run: dotnet publish ConvA/ConvA.csproj -c Release -r osx-arm64 -o bin/darwin-arm64
-      - name: Pack osx-arm64
-        run: tar -czvf conva-darwin-arm64.tar.gz -C bin/darwin-arm64 .
       - name: Build osx-amd64
         run: dotnet publish ConvA/ConvA.csproj -c Release -r osx-amd64 -o bin/darwin-amd64
+      - name: Sign
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          APPLE_DEVELOPER_ID: ${{ secrets.APPLE_DEVELOPER_ID }}
+          ENTITLEMENTS_PATH: Assets/entitlemtns.plist
+        run: |
+          echo $BUILD_CERTIFICATE_BASE64 | base64 --decode > certificate.p12
+          security create-keychain -p $KEYCHAIN_PASSWORD build.keychain
+          security default-keychain -s build.keychain
+          security unlock-keychain -p $KEYCHAIN_PASSWORD build.keychain
+          security import certificate.p12 -k build.keychain -P $P12_PASSWORD -T /usr/bin/codesign
+          security set-key-partition-list -S apple-tool:,apple:,codesign: -s -k $KEYCHAIN_PASSWORD build.keychain
+          codesign -s "$APPLE_DEVELOPER_ID" --entitlements $ENTITLEMENTS_PATH -f bin/darwin-amd64/conva
+          codesign -s "$APPLE_DEVELOPER_ID" --entitlements $ENTITLEMENTS_PATH -f bin/darwin-arm64/conva
+      - name: Pack osx-arm64
+        run: tar -czvf conva-darwin-arm64.tar.gz -C bin/darwin-arm64 .
       - name: Pack osx-amd64
         run: tar -czvf conva-darwin-amd64.tar.gz -C bin/darwin-amd64 .
       - name: Upload Release Asset
