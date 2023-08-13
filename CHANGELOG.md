@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.1.9](https://github.com/nevse/conva/compare/v0.1.8...v0.1.9) (2023-08-13)
+
+
+### Bug Fixes
+
+* sign binaries ([51bb57c](https://github.com/nevse/conva/commit/51bb57c41bb18382acb0a844653927de99cad5e9))
+
 ## [0.1.8](https://github.com/nevse/conva/compare/v0.1.7...v0.1.8) (2023-08-12)
 
 
