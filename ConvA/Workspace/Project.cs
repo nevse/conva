@@ -3,19 +3,17 @@ using System.Text;
 using System.Text.RegularExpressions;
 using MSPath = System.IO.Path;
 using System.Xml;
-using System.Linq;
 
 namespace ConvA;
 
 public class Project {
     public static Project Load(string filePath) {
-        Project project = new Project(filePath);
+        Project project = new (filePath);
         return project;
     }
 
     public string Name { get; set; }
     public string ProjectPath { get; set; }
-    public List<string> Frameworks { get; set; }
     XmlDocument Document { get; }
 
     public Project(string path) {
@@ -29,8 +27,8 @@ public class Project {
         return $"Name: {Name}, FilePath: {ProjectPath}";
     }
 
-    public string EvaluateProperty(string name, string defaultValue = null) {
-        MatchCollection propertyMatches = GetPropertyMatches(ProjectPath, name);
+    public string? EvaluateProperty(string name, string? defaultValue = null) {
+        MatchCollection? propertyMatches = GetPropertyMatches(ProjectPath, name);
         if (propertyMatches == null)
             return defaultValue;
 
@@ -42,7 +40,7 @@ public class Project {
     }
 
     public string? GetOutputAssembly(string configuration, string framework, string runtimeId, string platform) {
-        string rootDirectory = MSPath.GetDirectoryName(ProjectPath);
+        string rootDirectory = MSPath.GetDirectoryName(ProjectPath) ?? throw new InvalidOperationException();
         string outputDirectory = MSPath.Combine(rootDirectory, "bin", configuration, framework);
 
         if (!String.IsNullOrEmpty(runtimeId))
@@ -61,7 +59,7 @@ public class Project {
         }
 
         if (platform.IsWindows()) {
-            string executableName = EvaluateProperty("AssemblyName", Name);
+            string? executableName = EvaluateProperty("AssemblyName", Name);
             string[] files = Directory.GetFiles(outputDirectory, $"{executableName}.exe", SearchOption.AllDirectories);
             if (!files.Any())
                 throw new FileNotFoundException($"Could not find \"{executableName}.exe\" in {outputDirectory}");
@@ -81,14 +79,14 @@ public class Project {
     }
 
     public List<string> RemoveDllReferences(List<Reference> references) {
-        XmlNodeList nodes = Document.SelectNodes("//ItemGroup/Reference");
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup/Reference");
         List<string> removedReferences = new List<string>();
         if (nodes == null)
             return removedReferences;
-        HashSet<string> referenceNames = new(references.Select(r => r.Name));
+        HashSet<string> referenceNames = new(references.Select(r => r.Name)!);
         foreach (XmlNode node in nodes) {
-            string referenceName = node?.Attributes?["Include"]?.Value;
-            if (!referenceNames.Contains(referenceName)) {
+            string? referenceName = node?.Attributes?["Include"]?.Value;
+            if (referenceName == null || !referenceNames.Contains(referenceName)) {
                 continue;
             }
 
@@ -100,7 +98,7 @@ public class Project {
     }
 
     public void RemoveEmptyItemGroups() {
-        XmlNodeList nodes = Document.SelectNodes("//ItemGroup");
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup");
         if (nodes == null)
             return;
         foreach (XmlNode node in nodes) {
@@ -122,13 +120,13 @@ public class Project {
         itemGroup.AppendChild(packageReferenceElement);
     }
 
-    public bool CheckCondition(XmlElement element, string? condition) {
-        var conditionAttr = element.GetAttribute("Condition");
+    public bool CheckCondition(XmlElement? element, string? condition) {
+        var conditionAttr = element?.GetAttribute("Condition");
         if (string.IsNullOrEmpty(conditionAttr)) {
             return false;
         }
 
-        return conditionAttr.Replace(" ", "") == condition.Replace(" ", "");
+        return conditionAttr.Replace(" ", "") == condition?.Replace(" ", "");
     }
 
     public void AddProjectReference(IEnumerable<string> references, string? platform = "", string? repoPath = null) {
@@ -150,7 +148,7 @@ public class Project {
         }
 
         if (itemGroupNode == null) {
-            XmlNodeList projectNodes = Document.SelectNodes("//Project");
+            XmlNodeList? projectNodes = Document.SelectNodes("//Project");
             if (projectNodes == null)
                 throw new EvaluateException("Could not find project node");
             var projectNode = projectNodes[0];
@@ -164,7 +162,7 @@ public class Project {
 
         foreach (var projectPath in references) {
             var refNode = itemGroupNode.AppendChild(Document.CreateElement("ProjectReference")) as XmlElement;
-            refNode.SetAttribute("Include", projectPath);
+            refNode?.SetAttribute("Include", projectPath);
             Console.WriteLine($"Add reference {projectPath}");
         }
     }
@@ -193,7 +191,7 @@ public class Project {
         }
 
         if (itemGroupNode == null) {
-            XmlNodeList projectNodes = Document.SelectNodes("//Project");
+            XmlNodeList? projectNodes = Document.SelectNodes("//Project");
             if (projectNodes == null)
                 throw new EvaluateException("Could not find project node");
             var projectNode = projectNodes[0];
@@ -206,41 +204,48 @@ public class Project {
             string reference = referencePair.Key;
             string hintPath = referencePair.Value;
             var refNode = refContentNode.AppendChild(Document.CreateElement("Reference")) as XmlElement;
-            refNode.SetAttribute("Include", reference);
-            var hintPathNode = refNode.AppendChild(Document.CreateElement("HintPath")) as XmlElement;
-            var refAbsPath = hintPath;
-            var refRelPath = Path.GetRelativePath(Path.GetDirectoryName(ProjectPath), refAbsPath);
-            hintPathNode.InnerText = refRelPath.ToPlatformPath();
+            refNode?.SetAttribute("Include", reference);
+            var hintPathNode = refNode?.AppendChild(Document.CreateElement("HintPath")) as XmlElement;
+            string refAbsPath = hintPath;
+            string refRelPath = Path.GetRelativePath(Path.GetDirectoryName(ProjectPath)!, refAbsPath);
+            if (hintPathNode != null) {
+                hintPathNode.InnerText = refRelPath.ToPlatformPath();
+            }
+
             Console.WriteLine($"Add reference {reference}");
         }
     }
 
     public bool RemovePackage(string packageName) {
-        XmlNodeList packages = Document.SelectNodes("//ItemGroup/PackageReference");
+        XmlNodeList? packages = Document.SelectNodes("//ItemGroup/PackageReference");
         bool isRemoved = false;
         if (packages == null)
             return isRemoved;
         foreach (XmlNode node in packages) {
-            string packageNameFromNode = node.Attributes?["Include"]?.Value;
-            if (String.Equals(packageNameFromNode, packageName, StringComparison.InvariantCultureIgnoreCase)) {
-                node.ParentNode?.RemoveChild(node);
-                isRemoved = true;
+            string? packageNameFromNode = node.Attributes?["Include"]?.Value;
+            if (!String.Equals(packageNameFromNode, packageName, StringComparison.InvariantCultureIgnoreCase)) {
+                continue;
             }
+            node.ParentNode?.RemoveChild(node);
+            isRemoved = true;
         }
 
         return isRemoved;
     }
 
     public List<String> RemovePackageRegex(string packageRegexString) {
-        XmlNodeList packages = Document.SelectNodes("//ItemGroup/PackageReference");
+        XmlNodeList? packages = Document.SelectNodes("//ItemGroup/PackageReference");
         List<string> removedPackages = new List<string>();
         if (packages == null)
             return removedPackages;
         Regex packageRegex = new Regex(packageRegexString, RegexOptions.IgnoreCase);
         foreach (XmlNode node in packages) {
-            string packageNameFromNode = node.Attributes?["Include"]?.Value;
-            if (packageRegex.IsMatch(packageNameFromNode)) {
-                node.ParentNode?.RemoveChild(node);
+            string? packageNameFromNode = node.Attributes?["Include"]?.Value;
+            if (packageNameFromNode != null && !packageRegex.IsMatch(packageNameFromNode)) {
+                continue;
+            }
+            node.ParentNode?.RemoveChild(node);
+            if (packageNameFromNode != null) {
                 removedPackages.Add(packageNameFromNode);
             }
         }
@@ -253,7 +258,7 @@ public class Project {
     }
 
     public IEnumerable<PackageReference> GetPackageReferences() {
-        XmlNodeList nodes = Document.SelectNodes("//ItemGroup");
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup");
         if (nodes != null) {
             foreach (XmlNode node in nodes) {
                 foreach (XmlNode subNode in node.ChildNodes) {
@@ -274,7 +279,7 @@ public class Project {
         foreach (XmlNode node in itemGroup.ChildNodes) {
             if (!String.Equals("PackageReference", node.Name, StringComparison.InvariantCultureIgnoreCase))
                 continue;
-            string packageNameFromNode = node.Attributes?["Include"]?.Value;
+            string? packageNameFromNode = node.Attributes?["Include"]?.Value;
             if (String.Equals(packageNameFromNode, packageName, StringComparison.InvariantCultureIgnoreCase))
                 node.ParentNode?.RemoveChild(node);
         }
@@ -285,7 +290,6 @@ public class Project {
         if (nodes == null) {
             yield break;
         }
-
         foreach (XmlNode node in nodes) {
             foreach (XmlNode subNode in node.ChildNodes) {
                 if (!String.Equals("PackageReference", subNode.Name, StringComparison.InvariantCultureIgnoreCase)) {
@@ -299,10 +303,10 @@ public class Project {
     }
 
     XmlNode GetItemGroupWithPackageReferences() {
-        XmlNodeList nodes = Document.SelectNodes("//ItemGroup");
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup");
         if (nodes != null) {
             foreach (XmlNode node in nodes) {
-                string condition = node.Attributes?["Condition"]?.Value;
+                string? condition = node.Attributes?["Condition"]?.Value;
                 if (!String.IsNullOrEmpty(condition))
                     continue;
                 foreach (XmlNode subNode in node.ChildNodes) {
@@ -314,9 +318,9 @@ public class Project {
 
         XmlNode itemGroup = Document.CreateElement("ItemGroup");
         if (nodes?.Count == 0) {
-            XmlNodeList propertyGroups = Document.SelectNodes("//PropertyGroup");
+            XmlNodeList? propertyGroups = Document.SelectNodes("//PropertyGroup");
             if (propertyGroups?.Count == 0) {
-                XmlNodeList projectNodes = Document.SelectNodes("//Project");
+                XmlNodeList? projectNodes = Document.SelectNodes("//Project");
                 projectNodes?[0]?.AppendChild(itemGroup);
             } else {
                 propertyGroups?[0]?.ParentNode?.InsertAfter(itemGroup, propertyGroups[0]);
@@ -328,7 +332,7 @@ public class Project {
         return itemGroup;
     }
 
-    MatchCollection GetPropertyMatches(string projectPath, string propertyName, bool isEndPoint = false) {
+    MatchCollection? GetPropertyMatches(string projectPath, string propertyName, bool isEndPoint = false) {
         if (!File.Exists(projectPath))
             return null;
 
@@ -342,9 +346,12 @@ public class Project {
         Regex importRegex = new Regex(@"<Import\s+Project\s*=\s*""(.*?)""");
         /* Find in imported project */
         foreach (Match importMatch in importRegex.Matches(content).Cast<Match>()) {
-            string basePath = MSPath.GetDirectoryName(projectPath);
+            string? basePath = MSPath.GetDirectoryName(projectPath);
             string importedProjectName =
                 importMatch.Groups[1].Value.Replace("$(MSBuildThisFileDirectory)", String.Empty);
+            if (basePath == null) {
+                continue;
+            }
             string importedProjectPath = MSPath.Combine(basePath, importedProjectName).ToPlatformPath();
 
             if (!File.Exists(importedProjectPath))
@@ -352,7 +359,7 @@ public class Project {
             if (!File.Exists(importedProjectPath))
                 return null;
 
-            MatchCollection importedProjectPropertyMatches =
+            MatchCollection? importedProjectPropertyMatches =
                 GetPropertyMatches(importedProjectPath, propertyName, isEndPoint);
             if (importedProjectPropertyMatches != null)
                 return importedProjectPropertyMatches;
@@ -362,19 +369,25 @@ public class Project {
         if (isEndPoint)
             return null;
         /* Find in Directory.Build.props */
-        string propsFile = GetDirectoryPropsPath(MSPath.GetDirectoryName(projectPath));
+        string? propsFile = GetDirectoryPropsPath(MSPath.GetDirectoryName(projectPath));
         if (propsFile == null)
             return null;
 
         return GetPropertyMatches(propsFile, propertyName, true);
     }
 
-    private string GetDirectoryPropsPath(string workspacePath) {
-        string[] propFiles = Directory.GetFiles(workspacePath, "Directory.Build.props", SearchOption.TopDirectoryOnly);
-        if (propFiles.Length > 0)
-            return propFiles[0];
+    private string? GetDirectoryPropsPath(string? workspacePath) {
+        if (workspacePath != null) {
+            string[] propFiles = Directory.GetFiles(workspacePath, "Directory.Build.props", SearchOption.TopDirectoryOnly);
+            if (propFiles.Length > 0)
+                return propFiles[0];
+        }
 
-        DirectoryInfo parentDirectory = Directory.GetParent(workspacePath);
+        if (workspacePath == null) {
+            return null;
+        }
+
+        DirectoryInfo? parentDirectory = Directory.GetParent(workspacePath);
         if (parentDirectory == null)
             return null;
 
@@ -396,7 +409,7 @@ public class Project {
             /* If property reference other property */
             foreach (Match includeMatch in includeRegex.Matches(propertyValue).Cast<Match>()) {
                 string includePropertyName = includeMatch.Groups["inc"].Value;
-                string includePropertyValue = EvaluateProperty(includePropertyName);
+                string? includePropertyValue = EvaluateProperty(includePropertyName);
                 propertyValue = propertyValue.Replace($"$({includePropertyName})", includePropertyValue ?? "");
             }
 
@@ -425,17 +438,17 @@ public class Project {
         return backupPath;
     }
 
-    public List<Reference> GetDllReferences() {
-        XmlNodeList nodes = Document.SelectNodes("//Reference");
+    public List<Reference>? GetDllReferences() {
+        XmlNodeList? nodes = Document.SelectNodes("//Reference");
         if (nodes == null)
             return null;
 
         List<Reference> references = new();
         foreach (XmlNode node in nodes) {
-            string include = node.Attributes?["Include"]?.Value;
+            string? include = node.Attributes?["Include"]?.Value;
             if (include == null)
                 continue;
-            string hintPath = node.SelectSingleNode("HintPath")?.InnerText;
+            string? hintPath = node.SelectSingleNode("HintPath")?.InnerText;
             references.Add(new Reference() {
                 Name = include,
                 HintPath = hintPath

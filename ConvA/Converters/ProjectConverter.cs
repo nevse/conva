@@ -1,16 +1,21 @@
 namespace ConvA;
 
 public class ProjectConverter : ProjectConverterBase {
-    public ProjectConverter(RepoInfo repoInfo, bool useDllReference) : base(repoInfo) {
+    public ProjectConverter(RepoInfo repoInfo, bool useDllReference, bool useRefsForProjectReferences) : base(repoInfo) {
         UseDllReference = useDllReference;
+        UseRefsForProjectReferences = useRefsForProjectReferences;
     }
 
     public bool UseDllReference { get; }
+    public bool UseRefsForProjectReferences { get; }
 
     public override void Convert(Project project) {
-        var packageReferences = project.GetPackageReferences().Where(x => RepoInfo.CanConvertPackage(x.Name));
+        var packageReferences = project.GetPackageReferences().Where(x => x.Name != null && RepoInfo.CanConvertPackage(x.Name)).ToList();
         HashSet<string> packageNames = new();
         foreach (var packageReference in packageReferences) {
+            if (packageReference.Name == null) {
+                continue;
+            }
             packageNames.Add(packageReference.Name);
             foreach (string dependency in RepoInfo.CalculateDependencies(packageReference.Name)) {
                 if (!RepoInfo.CanConvertPackage(dependency))
@@ -44,14 +49,22 @@ public class ProjectConverter : ProjectConverterBase {
                 }
             }
 
-            project.AddProjectReference(commonProjectReferences.Select(x => RepoInfo.GetProjectPath(x)));
-            project.AddProjectReference(androidProjectReferences.Select(x => RepoInfo.GetProjectPath(x)), "android");
-            project.AddProjectReference(iosProjectReferences.Select(x => RepoInfo.GetProjectPath(x)), "ios");
+            project.AddProjectReference(commonProjectReferences.Select(GetProjectPath));
+            project.AddProjectReference(androidProjectReferences.Select(GetProjectPath), "android");
+            project.AddProjectReference(iosProjectReferences.Select(GetProjectPath), "ios");
         }
 
         //remove old packages
         foreach (PackageReference packageReference in packageReferences.ToList()) {
-            project.RemovePackage(packageReference.Name);
+            if (packageReference.Name != null) {
+                project.RemovePackage(packageReference.Name);
+            }
         }
+    }
+    string GetProjectPath(string reference) {
+        string projectPath = RepoInfo.GetProjectPath(reference);
+        if (UseRefsForProjectReferences)
+            return Path.ChangeExtension(projectPath, "Refs.csproj");
+        return projectPath;
     }
 }

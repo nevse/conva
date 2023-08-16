@@ -23,8 +23,12 @@ class Program {
 
     [Option('d', "dll", Required = false, Default = false, HelpText = "Convert to dll reference")]
     public bool UseDllReference { get; set; } = false;
+
     [Option('r', "reverse", Required = false, Default = false, HelpText = "Reverse conversion from dll or project reference to package reference")]
     public bool ReverseConversion { get; set; } = false;
+
+    [Option('p', "project-refs", Required = false, Default = false, HelpText = "Use .Refs. project reference")]
+    public bool UseRefsForProjectReferences { get; set; } = false;
 
     [Option('v', "version", Required = false, Default = "", HelpText = "Version of package reference")]
     public string? Version { get; set; }
@@ -51,7 +55,7 @@ class Program {
         RepoInfo repoInfo = new(RepositoryPath);
         repoInfo.Build();
         string actualVersion = String.IsNullOrEmpty(Version) ? repoInfo.GetVersion() : Version;
-        ProjectConverterBase converter = ReverseConversion ? new ProjectRevertConverter(repoInfo, actualVersion) : new ProjectConverter(repoInfo, UseDllReference);
+        ProjectConverterBase converter = ReverseConversion ? new ProjectRevertConverter(repoInfo, actualVersion) : new ProjectConverter(repoInfo, UseDllReference, UseRefsForProjectReferences);
         foreach (var projectFileName in new DirectoryInfo(ProjectPath).EnumerateFiles("*.csproj")) {
             Project project = new(projectFileName.FullName);
             converter.Convert(project);
@@ -60,6 +64,7 @@ class Program {
         }
     }
 
+    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "<Pending>")]
     async Task<Config?> GetConfig() {
         string path = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var configFileInfo = new FileInfo(Path.Combine(path, nameof(ConvA), "config.json"));

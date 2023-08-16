@@ -13,6 +13,7 @@
         <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
         <DebugType>embedded</DebugType>
         <UseAppHost>true</UseAppHost>
+        <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <!--x-release-please-start-version-->
         <Version>0.1.9</Version>
         <!--x-release-please-end-->

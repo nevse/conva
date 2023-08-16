@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Text.RegularExpressions;
 
 namespace ConvA;
@@ -11,10 +10,10 @@ public class RepoInfo {
         BasePath = path;
     }
 
-    public string BasePath { get; }
+    string BasePath { get; }
     public Dictionary<string, string> ProjectsByNameDictionary { get; } = new();
     public Dictionary<string, PackageInfo> PackagesByNameDictionary { get; } = new();
-    public string DevExpressDataVersion { get; set; }
+    public string? DevExpressDataVersion { get; set; }
 
     public void Build() {
         DirectoryInfo nuspecDirectory = new(Path.Combine(BasePath, NuspecBasePath.ToPlatformPath()));
@@ -22,17 +21,18 @@ public class RepoInfo {
                  nuspecDirectory.EnumerateFiles("*.nuspec", SearchOption.AllDirectories)) {
             PackageInfo packageInfo = new(nuspecFileInfo.FullName);
             packageInfo.Parse();
-            PackagesByNameDictionary[packageInfo.Id] = packageInfo;
+            if (packageInfo.Id != null) {
+                PackagesByNameDictionary[packageInfo.Id] = packageInfo;
+            }
         }
 
         DirectoryInfo projectDirectory = new(Path.Combine(BasePath, ProjectsBasePath.ToPlatformPath()));
         foreach (FileInfo projectPath in projectDirectory.EnumerateFiles("*.csproj", SearchOption.AllDirectories)) {
             Project project = new(projectPath.FullName);
-            string assemblyName = project.EvaluateProperty("AssemblyName");
             if (String.IsNullOrEmpty(DevExpressDataVersion)) {
                 DevExpressDataVersion = project.EvaluateProperty("DevExpress_Data");
             }
-
+            string? assemblyName = project.EvaluateProperty("AssemblyName");
             if (Path.GetFileNameWithoutExtension(projectPath.FullName) != assemblyName)
                 continue;
             ProjectsByNameDictionary.Add(assemblyName, projectPath.FullName);
@@ -70,22 +70,24 @@ public class RepoInfo {
     }
 
     public PackageInfo? GetPackageFromReference(Reference projectReference) {
-        if (!ProjectsByNameDictionary.TryGetValue(projectReference.Name, out string? packageInfo))
+        if (projectReference.Name != null && !ProjectsByNameDictionary.ContainsKey(projectReference.Name))
             return null;
         foreach (var pair in PackagesByNameDictionary) {
-            if (pair.Value.ReferencesAndroid.ContainsKey(projectReference.Name) ||
-                pair.Value.ReferencesIos.ContainsKey(projectReference.Name))
-                return pair.Value;
+            PackageInfo packageFromReference = pair.Value;
+            if (projectReference.Name != null && (packageFromReference.ReferencesAndroid.ContainsKey(projectReference.Name) ||
+                                                  packageFromReference.ReferencesIos.ContainsKey(projectReference.Name)))
+                return packageFromReference;
         }
-
         return null;
     }
 
     public string GetVersion() {
         Regex regex = new(@"(\d+\.\d+\.\d+)-.*");
-        Match match = regex.Match(DevExpressDataVersion);
-        if (match.Success)
-            return match.Groups[1].Value;
+        if (DevExpressDataVersion is not null) {
+            Match match = regex.Match(DevExpressDataVersion);
+            if (match.Success)
+                return match.Groups[1].Value;
+        }
         return "1.0.0";
     }
 

@@ -8,7 +8,7 @@ public class PackageInfo {
     }
 
     public string NuspecPath { get; set; }
-    public string Id { get; private set; }
+    public string? Id { get; private set; }
     public List<string> Dependencies { get; } = new();
     public Dictionary<string, string> ReferencesIos { get; } = new();
     public Dictionary<string, string> ReferencesAndroid { get; } = new();
@@ -21,6 +21,9 @@ public class PackageInfo {
         var nuspecTree = new XmlDocument();
         nuspecTree.Load(NuspecPath);
         var nuspecRoot = nuspecTree.DocumentElement;
+        if (nuspecRoot == null) {
+            throw new InvalidDataException("Nuspec root is null");
+        }
         var defaultNamespace = new XmlNamespaceManager(nuspecTree.NameTable);
         defaultNamespace.AddNamespace("ns", nuspecRoot.GetNamespaceOfPrefix(""));
         Id = nuspecRoot.SelectSingleNode("//ns:package/ns:metadata/ns:id", defaultNamespace)?.InnerText ??
@@ -37,9 +40,11 @@ public class PackageInfo {
         var packageDependencies =
             nuspecRoot.SelectNodes("//ns:package/ns:metadata/ns:dependencies/ns:group/ns:dependency/@id",
                 defaultNamespace);
-        foreach (XmlNode dependency in packageDependencies) {
-            if (dependency.Value != null) {
-                Dependencies.Add(dependency.Value);
+        if (packageDependencies != null) {
+            foreach (XmlNode dependency in packageDependencies) {
+                if (dependency.Value != null) {
+                    Dependencies.Add(dependency.Value);
+                }
             }
         }
 
@@ -59,9 +64,9 @@ public class PackageInfo {
         foreach (XmlNode file in files) {
             string? source = file.Attributes?["src"]?.Value;
             string? target = file.Attributes?["target"]?.Value;
-            string dllName = Path.GetFileName(TrimPath(source));
+            string? dllName = Path.GetFileName(TrimPath(source));
             if (target != null && target.Contains("ios")) {
-                if (source != null && iosReferences is { Count: 0 } && source.EndsWith(".dll")) {
+                if (dllName != null && source != null && iosReferences is { Count: 0 } && source.EndsWith(".dll")) {
                     ReferencesIos.Add(GetReferenceFromDll(dllName), ToAbsolutePath(source));
                 }
 
@@ -81,7 +86,7 @@ public class PackageInfo {
                 continue;
             }
 
-            if (source != null && androidReferences is { Count: 0 } && source.EndsWith(".dll")) {
+            if (dllName != null && source != null && androidReferences is { Count: 0 } && source.EndsWith(".dll")) {
                 ReferencesAndroid.Add(GetReferenceFromDll(dllName), ToAbsolutePath(source));
             }
 
@@ -109,18 +114,18 @@ public class PackageInfo {
 
         string? nuspecDirectory = Path.GetDirectoryName(NuspecPath);
         if (nuspecDirectory != null) {
-            return Path.GetFullPath(Path.Combine(nuspecDirectory, TrimPath(path)));
+            return Path.GetFullPath(Path.Combine(nuspecDirectory, TrimPath(path) ?? String.Empty));
         }
         throw new InvalidDataException("Nuspec directory is null");
     }
 
-    string TrimPath(string? path) {
-        if (path.StartsWith(".\\"))
+    string? TrimPath(string? path) {
+        if (path != null && path.StartsWith(".\\"))
             path = path.Substring(2);
         return NormalizePath(path);
     }
 
-    string NormalizePath(string? path) {
-        return path.Replace("\\", "/");
+    string? NormalizePath(string? path) {
+        return path?.Replace("\\", "/");
     }
 }

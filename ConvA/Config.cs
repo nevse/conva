@@ -1,5 +1,5 @@
-namespace ConvA; 
+namespace ConvA;
 
 public class Config {
-    public string RepositoryPath { get; set; }
+    public string? RepositoryPath { get; set; }
 }

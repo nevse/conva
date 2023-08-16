@@ -8,19 +8,23 @@ public class ProjectRevertConverter : ProjectConverterBase {
     private string Version { get; set; }
 
     public override void Convert(Project project) {
-        List<Reference> references = project.GetDllReferences();
+        List<Reference>? references = project.GetDllReferences();
         HashSet<PackageInfo> packageToAdd = new();
         List<Reference> referencesToRemove = new();
-        foreach (Reference reference in references) {
-            var package = RepoInfo.GetPackageFromReference(reference);
-            if (package == null)
-                continue;
-            packageToAdd.Add(package);
-            referencesToRemove.Add(reference);
+        if (references != null) {
+            foreach (Reference reference in references) {
+                var package = RepoInfo.GetPackageFromReference(reference);
+                if (package == null)
+                    continue;
+                packageToAdd.Add(package);
+                referencesToRemove.Add(reference);
+            }
         }
 
         foreach (var package in packageToAdd) {
-            project.AddPackageReference(package.Id, Version);
+            if (package.Id != null) {
+                project.AddPackageReference(package.Id, Version);
+            }
         }
 
         var removeDllReferences = project.RemoveDllReferences(referencesToRemove);

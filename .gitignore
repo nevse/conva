@@ -3,3 +3,4 @@ ConvA/bin
 ConvA/obj
 bin
 *.gz
+.vs
