@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.0.0](https://github.com/nevse/conva/compare/v0.1.9...v1.0.0) (2023-08-26)
+
+
+### ⚠ BREAKING CHANGES
+
+* improve command line, reduce amount of options
+
+### Features
+
+* add option --project-refs wich add .Refs. to csproj name ([805216f](https://github.com/nevse/conva/commit/805216fe6e2aa4b23c744b79518e17eec6d36953))
+* improve command line, reduce amount of options ([0a37d7c](https://github.com/nevse/conva/commit/0a37d7cb1585baacd29f73aa9eebf914c394766e))
+
 ## [0.1.9](https://github.com/nevse/conva/compare/v0.1.8...v0.1.9) (2023-08-13)
 
 
