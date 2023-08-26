@@ -5,14 +5,7 @@
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        <PublishTrimmed>true</PublishTrimmed>
-        <PublishSingleFile>true</PublishSingleFile>
-        <SelfContained>true</SelfContained>
-        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-        <IncludeSymbolsInSingleFile>false</IncludeSymbolsInSingleFile>
-        <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
-        <DebugType>embedded</DebugType>
-        <UseAppHost>true</UseAppHost>
+        
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <!--x-release-please-start-version-->
         <Version>0.1.9</Version>

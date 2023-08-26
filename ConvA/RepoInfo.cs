@@ -1,4 +1,5 @@
 using System.Text.RegularExpressions;
+using System;
 
 namespace ConvA;
 
@@ -79,6 +80,49 @@ public class RepoInfo {
                 return packageFromReference;
         }
         return null;
+    }
+    public PackageInfo? GetPackageFromReference(ProjectReference projectReference) {
+        if (projectReference.Path == null)
+            return null;
+        string? dllReferenceName = FindDllReferenceByProjectPath(projectReference.Path);
+        if (String.IsNullOrEmpty(dllReferenceName))
+            return null;
+        foreach (var pair in PackagesByNameDictionary) {
+            PackageInfo packageFromReference = pair.Value;
+            if ((packageFromReference.ReferencesAndroid.ContainsKey(dllReferenceName) ||
+                                                  packageFromReference.ReferencesIos.ContainsKey(dllReferenceName)))
+                return packageFromReference;
+        }
+        return null;
+    }
+
+    public string? FindDllReferenceByProjectPath(string path) {
+        const string refsExtension = ".refs.csproj";
+        if (path.ToLower().EndsWith(refsExtension))
+            path = String.Concat(path.AsSpan(0, path.Length - refsExtension.Length), ".csproj");
+        foreach (KeyValuePair<string, string> info in ProjectsByNameDictionary) {
+            string name = info.Key;
+            string projectPath = info.Value.Substring(BasePath.Length + 1);
+            if (HasCommonPath(path, projectPath))
+                return name;
+        }
+        return null;
+    }
+
+    static bool HasCommonPath(string path, string projectPath) {
+        int commonLength = 0;
+        int commonPathLength = Math.Min(projectPath.Length, path.Length);
+        for (int i = 0; i < commonPathLength; i++) {
+            if (projectPath[projectPath.Length - 1 - i] != path[path.Length - 1 - i])
+                break;
+            commonLength++;
+        }
+
+        if (commonLength == commonPathLength) {
+            return true;
+        }
+
+        return false;
     }
 
     public string GetVersion() {

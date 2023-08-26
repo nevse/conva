@@ -15,10 +15,12 @@ public class Project {
     public string Name { get; set; }
     public string ProjectPath { get; set; }
     XmlDocument Document { get; }
+    string ProjectDirectory { get; }
 
     public Project(string path) {
         Name = MSPath.GetFileNameWithoutExtension(path);
         ProjectPath = MSPath.GetFullPath(path);
+        ProjectDirectory = MSPath.GetDirectoryName(ProjectPath) ?? throw new InvalidOperationException();
         Document = new XmlDocument();
         Document.Load(path);
     }
@@ -89,11 +91,27 @@ public class Project {
             if (referenceName == null || !referenceNames.Contains(referenceName)) {
                 continue;
             }
-
             node?.ParentNode?.RemoveChild(node);
             removedReferences.Add(referenceName);
+            Console.WriteLine($"Remove dll reference {referenceName}");
         }
-
+        return removedReferences;
+    }
+    public List<string> RemoveProjectReferences(List<ProjectReference> references) {
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup/ProjectReference");
+        List<string> removedReferences = new List<string>();
+        if (nodes == null)
+            return removedReferences;
+        HashSet<string> referenceNames = new(references.Select(r => r.Path)!);
+        foreach (XmlNode node in nodes) {
+            string? referenceName = node?.Attributes?["Include"]?.Value;
+            if (referenceName == null || !referenceNames.Contains(referenceName)) {
+                continue;
+            }
+            node?.ParentNode?.RemoveChild(node);
+            removedReferences.Add(referenceName);
+            Console.WriteLine($"Remove project reference {referenceName}");
+        }
         return removedReferences;
     }
 
@@ -107,7 +125,13 @@ public class Project {
         }
     }
 
-    public void AddPackageReference(string packageName, string version) {
+    public void AddOrUpdatePackageReference(string packageName, string version) {
+        XmlElement? packageReferenceNode = FindPackageReferenceNode(packageName);
+        if (packageReferenceNode != null) {
+            packageReferenceNode.SetAttribute("Version", version);
+            Console.WriteLine($"Update package {packageName} to {version}");
+            return;
+        }
         XmlNode itemGroup = GetItemGroupWithPackageReferences();
         XmlElement packageReferenceElement = Document.CreateElement("PackageReference");
         XmlAttribute includeAttribute = Document.CreateAttribute("Include");
@@ -116,12 +140,14 @@ public class Project {
         versionAttribute.Value = version;
         packageReferenceElement.Attributes.Append(includeAttribute);
         packageReferenceElement.Attributes.Append(versionAttribute);
-        RemovePackageReference(packageName, itemGroup);
         itemGroup.AppendChild(packageReferenceElement);
     }
 
     public bool CheckCondition(XmlElement? element, string? condition) {
         var conditionAttr = element?.GetAttribute("Condition");
+        if (string.IsNullOrEmpty(conditionAttr) && string.IsNullOrEmpty(condition)) {
+            return true;
+        }
         if (string.IsNullOrEmpty(conditionAttr)) {
             return false;
         }
@@ -167,6 +193,54 @@ public class Project {
         }
     }
 
+    public bool UpdateProjectReference(string path, string newPath, string? condition = "") {
+        XmlNodeList? itemGroupNodes = Document.SelectNodes("//ItemGroup");
+        if (itemGroupNodes == null)
+            return false;
+        foreach (object? itemGroupNode in itemGroupNodes) {
+            if (!CheckCondition(itemGroupNode as XmlElement, condition)) {
+                continue;
+            }
+            var referenceNodes = (itemGroupNode as XmlNode)?.SelectNodes("ProjectReference");
+            if (referenceNodes == null)
+                continue;
+            foreach (XmlElement referenceNode in referenceNodes) {
+                string? include = referenceNode.Attributes?["Include"]?.Value;
+                if (!String.Equals(include, path, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+                referenceNode.SetAttribute("Include", newPath);
+                Console.WriteLine($"Update project reference {newPath}");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public bool UpdateDllReference(string reference, string hintPath, string? condition = "") {
+        XmlNodeList? itemGroupNodes = Document.SelectNodes("//ItemGroup");
+        if (itemGroupNodes == null)
+            return false;
+        foreach (object? itemGroupNode in itemGroupNodes) {
+            if (!CheckCondition(itemGroupNode as XmlElement, condition)) {
+                continue;
+            }
+            var referenceNodes = (itemGroupNode as XmlNode)?.SelectNodes("Reference");
+            if (referenceNodes == null)
+                continue;
+            foreach (XmlNode referenceNode in referenceNodes) {
+                string? include = referenceNode.Attributes?["Include"]?.Value;
+                if (!String.Equals(include, reference, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+                var hintPathNode = referenceNode.SelectSingleNode("HintPath");
+                if (hintPathNode == null)
+                    continue;
+                hintPathNode.InnerText = Path.GetRelativePath(Path.GetDirectoryName(ProjectPath)!, hintPath);
+                Console.WriteLine($"Update reference {reference} to {hintPathNode.InnerText}");
+                return true;
+            }
+        }
+        return false;
+    }
     public void AddDllReference(Dictionary<string, string> references, string? platform = "", string? repoPath = null) {
         IEnumerable<XmlNode> packageRefNodes = GetItemGroupWithPackageReference();
         string? condition = null;
@@ -177,7 +251,6 @@ public class Project {
                 if (!CheckCondition(node.ParentNode as XmlElement, condition)) {
                     continue;
                 }
-
                 itemGroupNode = node.ParentNode as XmlElement;
                 break;
             }
@@ -229,7 +302,7 @@ public class Project {
             node.ParentNode?.RemoveChild(node);
             isRemoved = true;
         }
-
+        Console.WriteLine($"Remove package {packageName}");
         return isRemoved;
     }
 
@@ -249,7 +322,6 @@ public class Project {
                 removedPackages.Add(packageNameFromNode);
             }
         }
-
         return removedPackages;
     }
 
@@ -283,6 +355,21 @@ public class Project {
             if (String.Equals(packageNameFromNode, packageName, StringComparison.InvariantCultureIgnoreCase))
                 node.ParentNode?.RemoveChild(node);
         }
+    }
+    XmlElement? FindPackageReferenceNode(string packageName) {
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup");
+        if (nodes != null) {
+            foreach (XmlNode node in nodes) {
+                foreach (XmlNode subNode in node.ChildNodes) {
+                    if (String.Equals("PackageReference", subNode.Name, StringComparison.InvariantCultureIgnoreCase)) {
+                        string packageNameFromNode = subNode.Attributes?["Include"]?.Value ?? String.Empty;
+                        if (String.Equals(packageNameFromNode, packageName, StringComparison.InvariantCultureIgnoreCase))
+                            return (XmlElement)subNode;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     IEnumerable<XmlNode> GetItemGroupWithPackageReference() {
@@ -438,23 +525,45 @@ public class Project {
         return backupPath;
     }
 
-    public List<Reference>? GetDllReferences() {
+    public List<Reference> GetDllReferences() {
         XmlNodeList? nodes = Document.SelectNodes("//Reference");
         if (nodes == null)
-            return null;
+            return new List<Reference>();
 
         List<Reference> references = new();
         foreach (XmlNode node in nodes) {
             string? include = node.Attributes?["Include"]?.Value;
             if (include == null)
                 continue;
+            string? condition = node.ParentNode?.Attributes?["Condition"]?.Value;
             string? hintPath = node.SelectSingleNode("HintPath")?.InnerText;
             references.Add(new Reference() {
                 Name = include,
-                HintPath = hintPath
+                HintPath = hintPath,
+                Condition = condition
             });
         }
 
+        return references;
+    }
+
+    public List<ProjectReference> GetProjectReferences() {
+        List<ProjectReference> references = new();
+        XmlNodeList? projectReferenceNodes = Document.SelectNodes("//ProjectReference");
+        if (projectReferenceNodes == null)
+            return references;
+        foreach (XmlNode projectReferenceNode in projectReferenceNodes) {
+            string? include = projectReferenceNode.Attributes?["Include"]?.Value;
+            if (include == null)
+                continue;
+            string? condition = projectReferenceNode.ParentNode?.Attributes?["Condition"]?.Value;
+            if (!Path.IsPathRooted(include))
+                include = Path.GetFullPath(ProjectDirectory, include);
+            references.Add(new ProjectReference() {
+                Path = include,
+                Condition = condition
+            });
+        }
         return references;
     }
 }
