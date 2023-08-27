@@ -30,7 +30,7 @@ class Program {
             name: "--patch-version",
             description: "Version of package reference");
 
-        var rootCommand = new RootCommand();
+        var rootCommand = new RootCommand("Convert project references to/from dll references");
         rootCommand.AddArgument(repositoryPathArgument);
         rootCommand.AddOption(fileOption);
         rootCommand.AddOption(projectPathOption);
@@ -39,24 +39,6 @@ class Program {
         rootCommand.SetHandler(Run, repositoryPathArgument, fileOption, projectPathOption, patchVersionOption);
         return await rootCommand.InvokeAsync(args);
     }
-    //usage example
-    // [Usage(ApplicationAlias = "conva")]
-    // public static IEnumerable<Example> Examples {
-    //     get {
-    //         return new List<Example>() {
-    //             new("Convert project in current dir to project references",
-    //                 new Program { RepositoryPath = "~/work/my-repo", Type = ConversionType.Proj }),
-    //             new("Convert project in current dir to dll references",
-    //                 new Program { RepositoryPath = "~/work/my-repo", Type = ConversionType.Dll }),
-    //             new("Convert project in current dir to package references with version 10.2.7",
-    //                 new Program {
-    //                     RepositoryPath = "~/work/my-repo",
-    //                     Type = ConversionType.Package,
-    //                     PatchVersion = "10.2.7"
-    //                 }),
-    //         };
-    //     }
-    // }
 
     static async Task<int> Run(string? repositoryPath, ConversionType? type, string? projectPath, string? packageVersion) {
         string actualProjectPath = projectPath ?? Directory.GetCurrentDirectory();

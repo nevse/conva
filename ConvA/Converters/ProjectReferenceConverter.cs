@@ -7,7 +7,7 @@ public class ProjectReferenceConverter : ProjectConverterBase {
 
     bool UseRefsForProjectReferences { get;}
 
-    protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<Reference> references, List<ProjectReference> projectReferences) {
+    protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<Reference> references, List<ProjectReference> projectReferences) {
         Dictionary<string, string> androidReferences = new();
         Dictionary<string, string> iosReferences = new();
         foreach (PackageInfo package in packages) {
@@ -70,6 +70,9 @@ public class ProjectReferenceConverter : ProjectConverterBase {
         project.AddProjectReference(androidProjectReferences.Select(GetProjectPath), "android");
         project.AddProjectReference(iosProjectReferences.Select(GetProjectPath), "ios");
 
+        foreach (var packageName in externPackages) {
+            project.AddOrUpdatePackageReference(packageName, RepoInfo.DevExpressDataVersion!);
+        }
         //remove packages
         foreach (PackageInfo package in packages) {
             if (package.Id != null) {
