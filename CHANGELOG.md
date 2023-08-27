@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.0](https://github.com/nevse/conva/compare/v1.0.1...v1.1.0) (2023-08-27)
+
+
+### Features
+
+* add assets support ([327e684](https://github.com/nevse/conva/commit/327e684253df084fe78ec4700950a4cb2b3d9ae4))
+* support convert/update extern dependencies ([f5bd71e](https://github.com/nevse/conva/commit/f5bd71e95531ee23527e521fab37f76f360ed373))
+
 ## [1.0.1](https://github.com/nevse/conva/compare/v1.0.0...v1.0.1) (2023-08-27)
 
 
