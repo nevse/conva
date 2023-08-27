@@ -46,10 +46,11 @@ public void Convert(Project project) {
             }
         }
         List<string> externPackages = GetExternDependencies(packages);
-        ConvertCore(project, packages, externPackages, convertableReferences, convertableProjectReferences);
+        List<string> externAssets = GetExternAssets(packages);
+        ConvertCore(project, packages, externPackages, externAssets, convertableReferences, convertableProjectReferences);
         project.RemoveEmptyItemGroups();
     }
-    protected abstract void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<Reference> references, List<ProjectReference> projectReferences);
+    protected abstract void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<string> assets, List<Reference> references, List<ProjectReference> projectReferences);
     List<string> GetExternDependencies(HashSet<PackageInfo> packages, string startWith = "DevExpress.") {
         HashSet<string> externPackages = new();
         foreach (PackageInfo package in packages) {
@@ -65,5 +66,14 @@ public void Convert(Project project) {
                 externPackages.Add(package.Id!);
         }
         return externPackages.ToList();
+    }
+    List<string> GetExternAssets(HashSet<PackageInfo> packages) {
+        List<string> assets = new();
+        foreach (PackageInfo package in packages) {
+            foreach (var asset in package.Assets) {
+                assets.Add(asset);
+            }
+        }
+        return assets;
     }
 }

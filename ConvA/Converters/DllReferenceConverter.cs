@@ -4,7 +4,7 @@ public class DllReferenceConverter : ProjectConverterBase {
     public DllReferenceConverter(RepoInfo repoInfo) : base(repoInfo) {
     }
 
-    protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<Reference> references, List<ProjectReference> projectReferences) {
+    protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<string> assets, List<Reference> references, List<ProjectReference> projectReferences) {
         Dictionary<string, string> androidReferences = new();
         Dictionary<string, string> iosReferences = new();
         foreach (PackageInfo package in packages) {
@@ -42,6 +42,9 @@ public class DllReferenceConverter : ProjectConverterBase {
         project.AddDllReference(iosReferences, "ios");
         foreach (var packageName in externPackages) {
             project.AddOrUpdatePackageReference(packageName, RepoInfo.DevExpressDataVersion!);
+        }
+        foreach (var asset in assets) {
+            project.AddOrUpdateAsset(asset);
         }
         //remove packages
         foreach (PackageInfo package in packages) {

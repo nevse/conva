@@ -7,8 +7,7 @@ public class PackageReferenceConverter : ProjectConverterBase {
 
     private string Version { get; }
 
-    protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<Reference> references,
-        List<ProjectReference> projectReferences) {
+    protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<string> assets, List<Reference> references, List<ProjectReference> projectReferences) {
 
         foreach (PackageInfo package in packages) {
             if (package.Id != null) {
@@ -20,5 +19,8 @@ public class PackageReferenceConverter : ProjectConverterBase {
         }
         project.RemoveProjectReferences(projectReferences);
         project.RemoveDllReferences(references);
+        foreach (var asset in assets) {
+            project.RemoveAsset(asset);
+        }
     }
 }

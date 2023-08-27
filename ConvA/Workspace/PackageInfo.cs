@@ -12,6 +12,7 @@ public class PackageInfo {
     public List<string> Dependencies { get; } = new();
     public Dictionary<string, string> ReferencesIos { get; } = new();
     public Dictionary<string, string> ReferencesAndroid { get; } = new();
+    public List<string> Assets { get; } = new();
 
     public void Parse() {
         if (!File.Exists(NuspecPath)) {
@@ -80,6 +81,10 @@ public class PackageInfo {
                         break;
                     }
                 }
+            }
+            if (target is "Assets\\Raw") {
+                Assets.Add(ToAbsolutePath(source));
+                continue;
             }
 
             if (target != null && !target.Contains("android")) {

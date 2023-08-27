@@ -143,6 +143,70 @@ public partial class Project {
         itemGroup.AppendChild(packageReferenceElement);
     }
 
+    public void RemoveAsset(string asset) {
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup/MauiAsset");
+        if (nodes != null) {
+            foreach (XmlElement node in nodes) {
+                string? include = node.Attributes?["Include"]?.Value;
+                if (include is null)
+                    continue;
+                string absIncludePath = Path.IsPathRooted(include) ? include : Path.GetFullPath(ProjectDirectory, include);
+                string relativePath = Path.GetRelativePath(ProjectDirectory, absIncludePath);
+                string commonPath = PathHelper.GetCommonPath(relativePath, asset);
+                if (String.IsNullOrEmpty(commonPath))
+                    continue;
+                if (PathHelper.HasCommonPath(commonPath, asset)) {
+                    node.ParentNode?.RemoveChild(node);
+                    return;
+                }
+            }
+        }
+    }
+    public void AddOrUpdateAsset(string asset) {
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup/MauiAsset");
+        if (nodes != null) {
+            foreach (XmlElement node in nodes) {
+                string? include = node.Attributes?["Include"]?.Value;
+                if (include is null)
+                    continue;
+                string absIncludePath = Path.IsPathRooted(include) ? include : Path.GetFullPath(ProjectDirectory, include);
+                string relativePath = Path.GetRelativePath(ProjectDirectory, absIncludePath);
+                string commonPath = PathHelper.GetCommonPath(relativePath, asset);
+                if (String.IsNullOrEmpty(commonPath))
+                    continue;
+                if (PathHelper.HasCommonPath(commonPath, asset)) {
+                    node.SetAttribute("Include", asset);
+                    Console.WriteLine($"Update asset {asset}");
+                    return;
+                }
+            }
+        }
+
+        nodes = Document.SelectNodes("//ItemGroup");
+        XmlNode? assetParent = null;
+        if (nodes != null) {
+            foreach (XmlNode node in nodes) {
+                if (node.Attributes?["Condition"]?.Value != null)
+                    continue;
+                assetParent = node;
+                break;
+            }
+        }
+        if (assetParent == null) {
+            XmlNodeList? projectNodes = Document.SelectNodes("//Project");
+            if (projectNodes == null)
+                throw new EvaluateException("Could not find project node");
+            var projectNode = projectNodes[0];
+            assetParent = Document.CreateElement("ItemGroup");
+            projectNode?.AppendChild(assetParent);
+        }
+        XmlElement assetNode = Document.CreateElement("MauiAsset");
+        assetNode.SetAttribute("Include", asset);
+        assetNode.SetAttribute("LogicalName", "%(RecursiveDir)%(Filename)%(Extension)");
+        assetParent.AppendChild(assetNode);
+        Console.WriteLine($"Add asset {asset}");
+    }
+
     public bool CheckCondition(XmlElement? element, string? condition) {
         var conditionAttr = element?.GetAttribute("Condition");
         if (string.IsNullOrEmpty(conditionAttr) && string.IsNullOrEmpty(condition)) {
