@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.0.1](https://github.com/nevse/conva/compare/v1.0.0...v1.0.1) (2023-08-27)
+
+
+### Bug Fixes
+
+* fix trimming on publish ([300cf35](https://github.com/nevse/conva/commit/300cf35a07b39b714d705822e9474398ee249fd7))
+
 ## [1.0.0](https://github.com/nevse/conva/compare/v0.1.9...v1.0.0) (2023-08-26)
 
 
