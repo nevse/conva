@@ -28,7 +28,7 @@ public class PackageInfo {
         defaultNamespace.AddNamespace("ns", nuspecRoot.GetNamespaceOfPrefix(""));
         Id = nuspecRoot.SelectSingleNode("//ns:package/ns:metadata/ns:id", defaultNamespace)?.InnerText ??
              throw new InvalidDataException("Package id is null");
-        if (Id == null || !Id.ToLower().Contains("maui")) {
+        if (Id == null || !Id.Contains("maui", StringComparison.CurrentCultureIgnoreCase)) {
             throw new NotSupportedException($"Package {Id} is not a maui package");
         }
 

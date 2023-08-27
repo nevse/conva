@@ -2,16 +2,26 @@
 
     <PropertyGroup>
         <OutputType>Exe</OutputType>
-        <TargetFramework>net7.0</TargetFramework>
+        <TargetFramework>net8.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
-        
+        <NoWarn>CA1861</NoWarn>
         <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
         <!--x-release-please-start-version-->
         <Version>1.0.0</Version>
         <!--x-release-please-end-->
     </PropertyGroup>
+    <PropertyGroup Condition="'$(Configuration)'=='Release'">
+        <PublishTrimmed>true</PublishTrimmed>
+        <PublishSingleFile>true</PublishSingleFile>
+        <SelfContained>true</SelfContained>
+        <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+        <IncludeSymbolsInSingleFile>false</IncludeSymbolsInSingleFile>
+        <EnableCompressionInSingleFile>false</EnableCompressionInSingleFile>
+        <DebugType>embedded</DebugType>
+        <UseAppHost>true</UseAppHost>
+    </PropertyGroup>
     <ItemGroup>
-      <PackageReference Include="CommandLineParser" Version="2.9.1" />
+      <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
     </ItemGroup>
 </Project>

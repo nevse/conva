@@ -6,7 +6,7 @@ using System.Xml;
 
 namespace ConvA;
 
-public class Project {
+public partial class Project {
     public static Project Load(string filePath) {
         Project project = new (filePath);
         return project;
@@ -53,7 +53,7 @@ public class Project {
 
         if (platform.IsAndroid()) {
             string[] files = Directory.GetFiles(outputDirectory, "*-Signed.apk", SearchOption.TopDirectoryOnly);
-            if (!files.Any())
+            if (files.Length == 0)
                 throw new FileNotFoundException($"Could not find \"*-Signed.apk\" in {outputDirectory}");
             if (files.Length > 1)
                 throw new EvaluateException($"Found more than one \"*-Signed.apk\" in {outputDirectory}");
@@ -63,14 +63,14 @@ public class Project {
         if (platform.IsWindows()) {
             string? executableName = EvaluateProperty("AssemblyName", Name);
             string[] files = Directory.GetFiles(outputDirectory, $"{executableName}.exe", SearchOption.AllDirectories);
-            if (!files.Any())
+            if (files.Length == 0)
                 throw new FileNotFoundException($"Could not find \"{executableName}.exe\" in {outputDirectory}");
             return files.FirstOrDefault();
         }
 
         if (platform.IsIPhone() || platform.IsMacCatalyst()) {
             string[] bundle = Directory.GetDirectories(outputDirectory, "*.app", SearchOption.TopDirectoryOnly);
-            if (!bundle.Any())
+            if (bundle.Length == 0)
                 throw new DirectoryNotFoundException($"Could not find \"*.app\" in {outputDirectory}");
             if (bundle.Length > 1)
                 throw new EvaluateException($"Found more than one \"*.app\" in {outputDirectory}");
@@ -424,13 +424,13 @@ public class Project {
             return null;
 
         string content = File.ReadAllText(projectPath);
-        content = Regex.Replace(content, @"<!--.*?-->", String.Empty, RegexOptions.Singleline);
+        content = SignleLineCommentRegex().Replace(content, String.Empty);
         /* Find in current project */
         MatchCollection propertyMatch =
             new Regex($@"<{propertyName}\s?.*>(.*?)<\/{propertyName}>\s*\n").Matches(content);
         if (propertyMatch.Count > 0)
             return propertyMatch;
-        Regex importRegex = new Regex(@"<Import\s+Project\s*=\s*""(.*?)""");
+        Regex importRegex = ImportRegex();
         /* Find in imported project */
         foreach (Match importMatch in importRegex.Matches(content).Cast<Match>()) {
             string? basePath = MSPath.GetDirectoryName(projectPath);
@@ -482,7 +482,7 @@ public class Project {
     }
 
     private string GetPropertyValue(string propertyName, MatchCollection matches) {
-        Regex includeRegex = new Regex(@"\$\((?<inc>.*?)\)");
+        Regex includeRegex = IncludeRegex();
         StringBuilder resultSequence = new StringBuilder();
         /* Process all property entrance */
         foreach (Match match in matches.Cast<Match>()) {
@@ -566,4 +566,13 @@ public class Project {
         }
         return references;
     }
+
+    [GeneratedRegex(@"<!--.*?-->", RegexOptions.Singleline)]
+    private static partial Regex SignleLineCommentRegex();
+
+    [GeneratedRegex(@"<Import\s+Project\s*=\s*""(.*?)""")]
+    private static partial Regex ImportRegex();
+
+    [GeneratedRegex(@"\$\((?<inc>.*?)\)")]
+    private static partial Regex IncludeRegex();
 }

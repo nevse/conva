@@ -44,7 +44,7 @@ public class ProjectReferenceConverter : ProjectConverterBase {
                         projectReferencesToRemove.Add(projectReference);
                     }
                 }
-            } else if (projectReference.Condition.ToLower().Contains("android")) {
+            } else if (projectReference.Condition.Contains("android", StringComparison.CurrentCultureIgnoreCase)) {
                 if (androidProjectReferences.Contains(dllReferenceName)) {
                     if (project.UpdateProjectReference(projectReference.Path, RepoInfo.GetProjectPath(dllReferenceName),
                             projectReference.Condition))
@@ -53,7 +53,7 @@ public class ProjectReferenceConverter : ProjectConverterBase {
                         projectReferencesToRemove.Add(projectReference);
                     }
                 }
-            } else if (projectReference.Condition.ToLower().Contains("ios")) {
+            } else if (projectReference.Condition.Contains("ios", StringComparison.CurrentCultureIgnoreCase)) {
                 if (iosProjectReferences.Contains(dllReferenceName)) {
                     if (project.UpdateProjectReference(projectReference.Path, RepoInfo.GetProjectPath(dllReferenceName),
                             projectReference.Condition))

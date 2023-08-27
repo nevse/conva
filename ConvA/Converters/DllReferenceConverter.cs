@@ -22,13 +22,13 @@ public class DllReferenceConverter : ProjectConverterBase {
             }
             string referenceCondition = reference.Condition.ToLower();
             if (referenceCondition.Contains("-android")) {
-                if (androidReferences.ContainsKey(reference.Name!)) {
-                    if (project.UpdateDllReference(reference.Name!, androidReferences[reference.Name!], reference.Condition))
+                if (androidReferences.TryGetValue(reference.Name!, out string? value)) {
+                    if (project.UpdateDllReference(reference.Name!, value, reference.Condition))
                         androidReferences.Remove(reference.Name!);
                 }
             } else if (referenceCondition.Contains("-ios")) {
-                if (iosReferences.ContainsKey(reference.Name!)) {
-                    if (project.UpdateDllReference(reference.Name!, iosReferences[reference.Name!], reference.Condition))
+                if (iosReferences.TryGetValue(reference.Name!, out string? value)) {
+                    if (project.UpdateDllReference(reference.Name!, value, reference.Condition))
                         iosReferences.Remove(reference.Name!);
                 }
             } else {

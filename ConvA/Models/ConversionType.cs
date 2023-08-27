@@ -1,6 +1,6 @@
 namespace ConvA;
 
-public enum ConversionType {
+public enum ConversionType: int {
     Proj,
     Proj2,
     Package,

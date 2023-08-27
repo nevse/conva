@@ -3,7 +3,7 @@ using System;
 
 namespace ConvA;
 
-public class RepoInfo {
+public partial class RepoInfo {
     const string ProjectsBasePath = "xamarin/maui";
     const string NuspecBasePath = "nuspec";
 
@@ -126,7 +126,7 @@ public class RepoInfo {
     }
 
     public string GetVersion() {
-        Regex regex = new(@"(\d+\.\d+\.\d+)-.*");
+        Regex regex = VersionRegex();
         if (DevExpressDataVersion is not null) {
             Match match = regex.Match(DevExpressDataVersion);
             if (match.Success)
@@ -138,4 +138,7 @@ public class RepoInfo {
     public bool CanConvertPackage(string packageName) {
         return PackagesByNameDictionary.ContainsKey(packageName);
     }
+
+    [GeneratedRegex(@"(\d+\.\d+\.\d+)-.*")]
+    private static partial Regex VersionRegex();
 }

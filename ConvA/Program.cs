@@ -1,7 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using CommandLine;
+﻿using System.CommandLine;
+using System.CommandLine.Parsing;
+using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
-using CommandLine.Text;
+using System.Text.Json.Serialization;
+using System.Text.Json.Serialization.Metadata;
 
 namespace ConvA;
 
@@ -12,94 +14,76 @@ class Program {
 
     [DynamicDependency(DynamicallyAccessedMemberTypes.All, typeof(Program))]
     public static async Task<int> Main(string[] args) {
-        var parser = new Parser(with => {
-            with.CaseInsensitiveEnumValues = true;
-        });
+        var repositoryPathArgument = new Argument<string>
+            ("path to repo", () => "" , "Path to working repository.");
 
-        ParserResult<Program>? parserResults = parser.ParseArguments<Program>(args);
+        var fileOption = new Option<ConversionType?>(
+            aliases: new[] { "-t", "--type" },
+            description: "Project conversion type",
+            getDefaultValue: () => ConversionType.Proj);
 
-        await parserResults.WithParsedAsync(async p => await p.Run());
-        await parserResults.WithNotParsedAsync(async errors => await ShowErrors(errors));
-        return ((parserResults is Parsed<Program>) || IsHelpOrVersionRequested ) ? 0 : -1;
+        var projectPathOption = new Option<string>(
+            aliases: new[] { "-p", "--path" },
+            description: "Path to project to convert");
+
+        var patchVersionOption = new Option<string>(
+            name: "--patch-version",
+            description: "Version of package reference");
+
+        var rootCommand = new RootCommand();
+        rootCommand.AddArgument(repositoryPathArgument);
+        rootCommand.AddOption(fileOption);
+        rootCommand.AddOption(projectPathOption);
+        rootCommand.AddOption(patchVersionOption);
+
+        rootCommand.SetHandler(Run, repositoryPathArgument, fileOption, projectPathOption, patchVersionOption);
+        return await rootCommand.InvokeAsync(args);
     }
-    static async Task ShowErrors(IEnumerable<Error> errors) {
-        foreach (var error in errors) {
-            if (error is HelpRequestedError) {
-                Parser.Default.ParseArguments<Program>(new[] { "--help" });
-                IsHelpOrVersionRequested = true;
-                continue;
-            } else if (error is VersionRequestedError) {
-                Parser.Default.ParseArguments<Program>(new[] { "--version" });
-                IsHelpOrVersionRequested = true;
-                continue;
-            } else if (error is UnknownOptionError unknownOptionError) {
-                Console.WriteLine($"Unknown option: {unknownOptionError.Token}");
-                Parser.Default.ParseArguments<Program>(new[] { "--help" });
-                continue;
-            }
-        }
-        await Task.CompletedTask;
-    }
-
-    public Config? Config { get; private set; }
-
-    // Options
-    [Value(0, MetaName = "input",  HelpText = "Path to working repository.")]
-    public string? RepositoryPath { get; set; }
-
-    [Option('t', "type", Required = false, Default = ConversionType.Proj, HelpText = "Project conversion type (package|dll|proj|proj2)")]
-    public ConversionType Type { get; set; } = ConversionType.Proj;
-
-    [Option('p', "path", Required = false, Default = null, HelpText = "Path to project to convert")]
-    public string? ProjectPath { get; set; }
-
-    [Option("patch-version", Required = false, Default = "", HelpText = "Version of package reference")]
-    public string? PatchVersion { get; set; }
-
     //usage example
-    [Usage(ApplicationAlias = "conva")]
-    public static IEnumerable<Example> Examples {
-        get {
-            return new List<Example>() {
-                new("Convert project in current dir to project references",
-                    new Program { RepositoryPath = "~/work/my-repo", Type = ConversionType.Proj }),
-                new("Convert project in current dir to dll references",
-                    new Program { RepositoryPath = "~/work/my-repo", Type = ConversionType.Dll }),
-                new("Convert project in current dir to package references with version 10.2.7",
-                    new Program {
-                        RepositoryPath = "~/work/my-repo",
-                        Type = ConversionType.Package,
-                        PatchVersion = "10.2.7"
-                    }),
-            };
-        }
-    }
+    // [Usage(ApplicationAlias = "conva")]
+    // public static IEnumerable<Example> Examples {
+    //     get {
+    //         return new List<Example>() {
+    //             new("Convert project in current dir to project references",
+    //                 new Program { RepositoryPath = "~/work/my-repo", Type = ConversionType.Proj }),
+    //             new("Convert project in current dir to dll references",
+    //                 new Program { RepositoryPath = "~/work/my-repo", Type = ConversionType.Dll }),
+    //             new("Convert project in current dir to package references with version 10.2.7",
+    //                 new Program {
+    //                     RepositoryPath = "~/work/my-repo",
+    //                     Type = ConversionType.Package,
+    //                     PatchVersion = "10.2.7"
+    //                 }),
+    //         };
+    //     }
+    // }
 
-    async Task Run() {
-        Instance = this;
-        string actualProjectPath = ProjectPath ?? Directory.GetCurrentDirectory();
-        Config = await GetConfig(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), nameof(ConvA), ConfigFileName)) ?? new Config();
-        RepositoryPath ??= Config.RepositoryPath;
+    static async Task<int> Run(string? repositoryPath, ConversionType? type, string? projectPath, string? packageVersion) {
+        string actualProjectPath = projectPath ?? Directory.GetCurrentDirectory();
+        var config = await GetConfig(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), nameof(ConvA), ConfigFileName)) ?? new Config();
+        if (String.IsNullOrEmpty(repositoryPath))
+            repositoryPath = null;
+        repositoryPath ??= config.RepositoryPath;
         Config? localConfig = FindLocalConfig(actualProjectPath);
-        RepositoryPath ??= localConfig?.RepositoryPath;
-        RepositoryPath ??= GetRepositoryPathFromProject(actualProjectPath);
-        if (String.IsNullOrEmpty(RepositoryPath) || !Directory.Exists(RepositoryPath)) {
+        repositoryPath ??= localConfig?.RepositoryPath;
+        repositoryPath ??= GetRepositoryPathFromProject(actualProjectPath);
+        if (String.IsNullOrEmpty(repositoryPath) || !Directory.Exists(repositoryPath)) {
             Console.WriteLine("Path to working repository is not specified.");
-            Parser.Default.ParseArguments<Program>(new[] { "--help" });
-            return;
+            //Parser.Default.ParseArguments<Program>(new[] { "--help" });
+            return -1;
         }
 
-        RepositoryPath = PathHelper.ExpandPath(RepositoryPath);
+        repositoryPath = PathHelper.ExpandPath(repositoryPath);
         string projectDir = File.Exists(actualProjectPath) ? Path.GetDirectoryName(actualProjectPath)! : actualProjectPath;
-        RepoInfo repoInfo = new(RepositoryPath);
+        RepoInfo repoInfo = new(repositoryPath);
         repoInfo.Build();
-        string actualVersion = String.IsNullOrEmpty(PatchVersion) ? repoInfo.GetVersion() : PatchVersion;
-        ProjectConverterBase converter = Type switch {
+        string actualVersion = String.IsNullOrEmpty(packageVersion) ? repoInfo.GetVersion() : packageVersion;
+        ProjectConverterBase converter = type switch {
             ConversionType.Proj => new ProjectReferenceConverter(repoInfo, false),
             ConversionType.Proj2 => new ProjectReferenceConverter(repoInfo, true),
             ConversionType.Dll => new DllReferenceConverter(repoInfo),
             ConversionType.Package => new PackageReferenceConverter(repoInfo, actualVersion),
-            _ => throw new NotSupportedException($"Conversion type {Type} is not supported")
+            _ => throw new NotSupportedException($"Conversion type {type} is not supported")
         };
         IEnumerable<string> projectFiles = File.Exists(actualProjectPath) ? new[] { actualProjectPath } : Directory.EnumerateFiles(actualProjectPath, "*.csproj");
         foreach (var projectFileName in projectFiles) {
@@ -108,7 +92,8 @@ class Program {
             project.SaveBackup();
             project.Save();
         }
-        await SaveConfig(RepositoryPath, Type, Path.Combine(projectDir, ConfigFileName));
+        await SaveConfig(repositoryPath, type, Path.Combine(projectDir, ConfigFileName));
+        return 0;
     }
 
     static string? GetRepositoryPathFromProject(string actualProjectPath) {
@@ -153,7 +138,8 @@ class Program {
         } while (directoryInfo != null);
         return null;
     }
-    Config? FindLocalConfig(string path) {
+
+    static Config? FindLocalConfig(string path) {
         if (String.IsNullOrEmpty(path))
             return null;
         if (File.Exists(path))
@@ -163,7 +149,7 @@ class Program {
             var configFileInfo = new FileInfo(Path.Combine(directoryInfo.FullName, ConfigFileName));
             if (configFileInfo.Exists) {
                 using var configStream = configFileInfo.OpenRead();
-                return JsonSerializer.Deserialize<Config>(configStream) ?? new Config();
+                return JsonSerializer.Deserialize<Config>(configStream, SourceGenerationContext.Default.Config) ?? new Config();
             }
             directoryInfo = directoryInfo.Parent;
             if (directoryInfo == null)
@@ -173,22 +159,20 @@ class Program {
         return null;
     }
 
-    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "<Pending>")]
-    async Task<Config?> GetConfig(string path) {
+    static async Task<Config?> GetConfig(string path) {
         var configFileInfo = new FileInfo(path);
         if (!configFileInfo.Exists)
             return new Config();
         await using var configStream = configFileInfo.OpenRead();
-        return await JsonSerializer.DeserializeAsync<Config>(configStream);
+        return await JsonSerializer.DeserializeAsync<Config>(configStream, SourceGenerationContext.Default.Config);
     }
 
-    [UnconditionalSuppressMessage("Trimming", "IL2026:Members annotated with 'RequiresUnreferencedCodeAttribute' require dynamic access otherwise can break functionality when trimming application code", Justification = "<Pending>")]
-    public async Task SaveConfig(string repoPath, ConversionType conversionType, string path) {
+    static async Task SaveConfig(string repoPath, ConversionType? conversionType, string path) {
         var configFileInfo = new FileInfo(path);
         if (!configFileInfo.Directory!.Exists)
             configFileInfo.Directory.Create();
-        Config = new Config { RepositoryPath = repoPath, ConversionType = conversionType };
+        var config = new Config { RepositoryPath = repoPath, ConversionType = conversionType };
         await using var configStream = configFileInfo.OpenWrite();
-        await JsonSerializer.SerializeAsync(configStream, Config);
+        await JsonSerializer.SerializeAsync(configStream, config, SourceGenerationContext.Default.Config);
     }
 }
