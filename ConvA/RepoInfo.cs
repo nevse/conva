@@ -34,9 +34,12 @@ public partial class RepoInfo {
                 DevExpressDataVersion = project.EvaluateProperty("DevExpress_Data");
             }
             string? assemblyName = project.EvaluateProperty("AssemblyName");
-            if (Path.GetFileNameWithoutExtension(projectPath.FullName) != assemblyName)
+            string assemblyNameFromProject = Path.GetFileNameWithoutExtension(projectPath.FullName);
+            if (String.IsNullOrEmpty(assemblyName))
+                Console.WriteLine($"Can't find assemblyName, suppose it as {assemblyNameFromProject} from project name.");
+            if (!String.IsNullOrEmpty(assemblyName) && assemblyNameFromProject != assemblyName)
                 continue;
-            ProjectsByNameDictionary.Add(assemblyName, projectPath.FullName);
+            ProjectsByNameDictionary.Add(assemblyNameFromProject, projectPath.FullName);
         }
     }
 

@@ -30,6 +30,8 @@ public partial class Project {
     }
 
     public string? EvaluateProperty(string name, string? defaultValue = null) {
+        if (name == "MSBuildThisFileDirectory")
+            return MSPath.GetDirectoryName(ProjectPath);
         MatchCollection? propertyMatches = GetPropertyMatches(ProjectPath, name);
         if (propertyMatches == null)
             return defaultValue;
@@ -150,10 +152,10 @@ public partial class Project {
                 string? include = node.Attributes?["Include"]?.Value;
                 if (include is null)
                     continue;
-                string absIncludePath = Path.IsPathRooted(include) ? include : Path.GetFullPath(ProjectDirectory, include);
-                string relativePath = Path.GetRelativePath(ProjectDirectory, absIncludePath);
-                string commonPath = PathHelper.GetCommonPath(relativePath, asset);
-                if (String.IsNullOrEmpty(commonPath))
+                string absIncludePath = Path.IsPathRooted(include) ? include : Path.GetFullPath(include, ProjectDirectory).ToPlatformPath();
+                string relativePath = Path.GetRelativePath(ProjectDirectory, absIncludePath).ToPlatformPath();
+                string commonPath = PathHelper.GetCommonPath(relativePath, asset).ToPlatformPath();
+                if (String.IsNullOrEmpty(commonPath.Trim('*')))
                     continue;
                 if (PathHelper.HasCommonPath(commonPath, asset)) {
                     node.ParentNode?.RemoveChild(node);
@@ -169,7 +171,7 @@ public partial class Project {
                 string? include = node.Attributes?["Include"]?.Value;
                 if (include is null)
                     continue;
-                string absIncludePath = Path.IsPathRooted(include) ? include : Path.GetFullPath(ProjectDirectory, include);
+                string absIncludePath = Path.IsPathRooted(include) ? include : Path.GetFullPath(include, ProjectDirectory);
                 string relativePath = Path.GetRelativePath(ProjectDirectory, absIncludePath);
                 string commonPath = PathHelper.GetCommonPath(relativePath, asset);
                 if (String.IsNullOrEmpty(commonPath))
@@ -526,8 +528,13 @@ public partial class Project {
 
         return GetPropertyMatches(propsFile, propertyName, true);
     }
-
-    private string? GetDirectoryPropsPath(string? workspacePath) {
+    string ExpandPathWithProjectVariables(string path) {
+        string result = path;
+        if (path.Contains("$(MSBuildThisFileDirectory)"))
+            result = path.Replace("$(MSBuildThisFileDirectory)", MSPath.GetDirectoryName(ProjectPath) ?? throw new InvalidOperationException());
+        return result;
+    }
+    string? GetDirectoryPropsPath(string? workspacePath) {
         if (workspacePath != null) {
             string[] propFiles = Directory.GetFiles(workspacePath, "Directory.Build.props", SearchOption.TopDirectoryOnly);
             if (propFiles.Length > 0)
@@ -620,6 +627,7 @@ public partial class Project {
             string? include = projectReferenceNode.Attributes?["Include"]?.Value;
             if (include == null)
                 continue;
+            include = ExpandPathWithProjectVariables(include);
             string? condition = projectReferenceNode.ParentNode?.Attributes?["Condition"]?.Value;
             if (!Path.IsPathRooted(include))
                 include = Path.GetFullPath(ProjectDirectory, include);

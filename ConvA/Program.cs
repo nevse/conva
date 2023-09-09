@@ -156,5 +156,6 @@ class Program {
         var config = new Config { RepositoryPath = repoPath, ConversionType = conversionType };
         await using var configStream = configFileInfo.OpenWrite();
         await JsonSerializer.SerializeAsync(configStream, config, SourceGenerationContext.Default.Config);
+        await configStream.FlushAsync();
     }
 }
