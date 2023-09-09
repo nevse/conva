@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.1.1](https://github.com/nevse/conva/compare/v1.1.0...v1.1.1) (2023-09-09)
+
+
+### Bug Fixes
+
+* process variables inside references ([2f7dafe](https://github.com/nevse/conva/commit/2f7dafe0d603a7b85e5d7a4e4f97ef456b8bbff1))
+* support projects without assemblyname ([d104965](https://github.com/nevse/conva/commit/d1049654d84c89f2d4cb51010b27586eaa8dadea))
+
 ## [1.1.0](https://github.com/nevse/conva/compare/v1.0.1...v1.1.0) (2023-08-27)
 
 
