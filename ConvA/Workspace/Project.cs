@@ -104,7 +104,7 @@ public partial class Project {
         List<string> removedReferences = new List<string>();
         if (nodes == null)
             return removedReferences;
-        HashSet<string> referenceNames = new(references.Select(r => r.Path)!);
+        HashSet<string> referenceNames = new(references.Select(r => r.Name)!);
         foreach (XmlNode node in nodes) {
             string? referenceName = node?.Attributes?["Include"]?.Value;
             if (referenceName == null || !referenceNames.Contains(referenceName)) {
@@ -530,9 +530,13 @@ public partial class Project {
     }
     string ExpandPathWithProjectVariables(string path) {
         string result = path;
-        if (path.Contains("$(MSBuildThisFileDirectory)"))
-            result = path.Replace("$(MSBuildThisFileDirectory)", MSPath.GetDirectoryName(ProjectPath) ?? throw new InvalidOperationException());
-        return result;
+        if (path.Contains("$(MSBuildThisFileDirectory)")) {
+            result = result.Replace("$(MSBuildThisFileDirectory)..",
+                $"{MSPath.GetDirectoryName(ProjectPath)}{Path.DirectorySeparatorChar}..");
+            result = result.Replace("$(MSBuildThisFileDirectory)", MSPath.GetDirectoryName(ProjectPath));
+        }
+
+        return result.ToPlatformPath();
     }
     string? GetDirectoryPropsPath(string? workspacePath) {
         if (workspacePath != null) {
@@ -608,16 +612,62 @@ public partial class Project {
                 continue;
             string? condition = node.ParentNode?.Attributes?["Condition"]?.Value;
             string? hintPath = node.SelectSingleNode("HintPath")?.InnerText;
-            references.Add(new Reference() {
-                Name = include,
-                HintPath = hintPath,
-                Condition = condition
-            });
+            HashSet<string> properties = GetPropertyList(include);
+            properties.UnionWith(GetPropertyList(hintPath ?? String.Empty));
+            if (properties.Count > 0) {
+                List<(string,string)> referenceItems = new() { (include!, hintPath ?? String.Empty) };
+                foreach (string property in properties) {
+                    string? propertyValue = EvaluateProperty(property);
+                    if (propertyValue == null)
+                        continue;
+                    string[] propertyValues = propertyValue.Split(';');
+                    bool isIncludeContainsProperty = include.Contains($"$({property})");
+                    int itemCount = referenceItems.Count;
+                    for (int itemIndex = 0; itemIndex < itemCount; itemIndex++) {
+                        var referenceItem = referenceItems[itemIndex];
+                        string includeItem = referenceItem.Item1.Replace($"$({property})", propertyValues[0]);
+                        string hintPathItem = referenceItem.Item2.Replace($"$({property})", propertyValues[0]);
+                        referenceItems[itemIndex] = (includeItem, hintPathItem);
+                        for (int i = 1; i < propertyValues.Length; i++) {
+                            includeItem = referenceItem.Item1.Replace($"$({property})", propertyValues[i]); hintPathItem = referenceItem.Item2.Replace($"$({property})", propertyValues[i]);
+                            if (isIncludeContainsProperty)
+                                referenceItems.Add((includeItem, hintPathItem));
+                            else {
+                                referenceItems[itemIndex] = (includeItem, hintPathItem);
+                            }
+                        }
+                    }
+                }
+                ExpandedReference reference = new () {
+                    Name = include,
+                    HintPath = hintPath,
+                    Condition = condition
+                };
+                foreach (var propertyValueItem in referenceItems) {
+                    reference.ExpandedNames.Add(propertyValueItem.Item1);
+                    reference.ExpandedHintPath.Add(propertyValueItem.Item2);
+                }
+                references.Add(reference);
+            } else {
+                references.Add(new Reference() {
+                    Name = include,
+                    HintPath = hintPath,
+                    Condition = condition
+                });
+            }
         }
 
         return references;
     }
-
+    HashSet<string> GetPropertyList(string stringValue) {
+        HashSet<string> properties = new();
+        Regex propertyRegex = PropertyRegex();
+        foreach (Match match in propertyRegex.Matches(stringValue).Cast<Match>()) {
+            string property = match.Groups[1].Value;
+            properties.Add(property);
+        }
+        return properties;
+    }
     public List<ProjectReference> GetProjectReferences() {
         List<ProjectReference> references = new();
         XmlNodeList? projectReferenceNodes = Document.SelectNodes("//ProjectReference");
@@ -627,12 +677,14 @@ public partial class Project {
             string? include = projectReferenceNode.Attributes?["Include"]?.Value;
             if (include == null)
                 continue;
-            include = ExpandPathWithProjectVariables(include);
+            string path = ExpandPathWithProjectVariables(include);
             string? condition = projectReferenceNode.ParentNode?.Attributes?["Condition"]?.Value;
-            if (!Path.IsPathRooted(include))
-                include = Path.GetFullPath(ProjectDirectory, include);
+            if (!Path.IsPathRooted(path))
+                path = Path.GetFullPath(ProjectDirectory, include);
+            path = Path.GetFullPath(path);
             references.Add(new ProjectReference() {
-                Path = include,
+                Name = include,
+                Path = path,
                 Condition = condition
             });
         }
@@ -647,4 +699,6 @@ public partial class Project {
 
     [GeneratedRegex(@"\$\((?<inc>.*?)\)")]
     private static partial Regex IncludeRegex();
+    [GeneratedRegex(@"\$\((.*?)\)", RegexOptions.Singleline)]
+    private static partial Regex PropertyRegex();
 }

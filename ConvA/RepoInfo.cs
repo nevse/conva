@@ -7,6 +7,10 @@ public partial class RepoInfo {
     const string ProjectsBasePath = "xamarin/maui";
     const string NuspecBasePath = "nuspec";
 
+
+    [GeneratedRegex(@"(\d+\.\d+\.\d+)-.*")]
+    private static partial Regex VersionRegex();
+
     public RepoInfo(string path) {
         BasePath = path;
     }
@@ -74,29 +78,19 @@ public partial class RepoInfo {
     }
 
     public PackageInfo? GetPackageFromReference(Reference projectReference) {
-        if (projectReference.Name != null && !ProjectsByNameDictionary.ContainsKey(projectReference.Name))
-            return null;
-        foreach (var pair in PackagesByNameDictionary) {
-            PackageInfo packageFromReference = pair.Value;
-            if (projectReference.Name != null && (packageFromReference.ReferencesAndroid.ContainsKey(projectReference.Name) ||
-                                                  packageFromReference.ReferencesIos.ContainsKey(projectReference.Name)))
+        List<string>? projectReferences = projectReference is ExpandedReference expandedReference ? expandedReference.ExpandedNames : new List<string> { projectReference?.Name!};
+        foreach (string referenceName in projectReferences) {
+            if (GetPackageFromReference(referenceName) is { } packageFromReference)
                 return packageFromReference;
         }
         return null;
     }
+
     public PackageInfo? GetPackageFromReference(ProjectReference projectReference) {
         if (projectReference.Path == null)
             return null;
         string? dllReferenceName = FindDllReferenceByProjectPath(projectReference.Path);
-        if (String.IsNullOrEmpty(dllReferenceName))
-            return null;
-        foreach (var pair in PackagesByNameDictionary) {
-            PackageInfo packageFromReference = pair.Value;
-            if ((packageFromReference.ReferencesAndroid.ContainsKey(dllReferenceName) ||
-                                                  packageFromReference.ReferencesIos.ContainsKey(dllReferenceName)))
-                return packageFromReference;
-        }
-        return null;
+        return GetPackageFromReference(dllReferenceName);
     }
 
     public string? FindDllReferenceByProjectPath(string path) {
@@ -113,6 +107,8 @@ public partial class RepoInfo {
     }
 
     static bool HasCommonPath(string path, string projectPath) {
+        path = path.ToLower();
+        projectPath = projectPath.ToLower();
         int commonLength = 0;
         int commonPathLength = Math.Min(projectPath.Length, path.Length);
         for (int i = 0; i < commonPathLength; i++) {
@@ -142,6 +138,15 @@ public partial class RepoInfo {
         return PackagesByNameDictionary.ContainsKey(packageName);
     }
 
-    [GeneratedRegex(@"(\d+\.\d+\.\d+)-.*")]
-    private static partial Regex VersionRegex();
+    PackageInfo? GetPackageFromReference(string? referenceName) {
+        if (referenceName != null && !ProjectsByNameDictionary.ContainsKey(referenceName))
+            return null;
+        foreach (var pair in PackagesByNameDictionary) {
+            PackageInfo packageFromReference = pair.Value;
+            if (referenceName != null && (packageFromReference.ReferencesAndroid.ContainsKey(referenceName) ||
+                                          packageFromReference.ReferencesIos.ContainsKey(referenceName)))
+                return packageFromReference;
+        }
+        return null;
+    }
 }
