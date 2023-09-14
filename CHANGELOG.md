@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/nevse/conva/compare/v1.1.1...v1.1.2) (2023-09-14)
+
+
+### Bug Fixes
+
+* repos structure parsing issue when references or project duplicated by name ([7d2da46](https://github.com/nevse/conva/commit/7d2da463f5f6fe2f95ceebcb224a3756d2edc85a))
+
 ## [1.1.1](https://github.com/nevse/conva/compare/v1.1.0...v1.1.1) (2023-09-09)
 
 
