@@ -66,7 +66,9 @@ public class PackageInfo {
             string? source = file.Attributes?["src"]?.Value;
             string? target = file.Attributes?["target"]?.Value;
             string? dllName = Path.GetFileName(TrimPath(source));
-            if (target != null && target.Contains("ios")) {
+            if (target is null || target.StartsWith("ref\\"))
+                continue;
+            if (target.Contains("ios")) {
                 if (dllName != null && source != null && iosReferences is { Count: 0 } && source.EndsWith(".dll")) {
                     ReferencesIos.Add(GetReferenceFromDll(dllName), ToAbsolutePath(source));
                 }
@@ -87,7 +89,7 @@ public class PackageInfo {
                 continue;
             }
 
-            if (target != null && !target.Contains("android")) {
+            if (!target.Contains("android")) {
                 continue;
             }
 

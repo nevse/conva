@@ -43,6 +43,11 @@ public partial class RepoInfo {
                 Console.WriteLine($"Can't find assemblyName, suppose it as {assemblyNameFromProject} from project name.");
             if (!String.IsNullOrEmpty(assemblyName) && assemblyNameFromProject != assemblyName)
                 continue;
+            if (ProjectsByNameDictionary.ContainsKey(assemblyNameFromProject)) {
+                Console.WriteLine($"warning: duplicate project name {assemblyNameFromProject} in {projectPath.FullName}");
+                continue;
+            }
+
             ProjectsByNameDictionary.Add(assemblyNameFromProject, projectPath.FullName);
         }
     }

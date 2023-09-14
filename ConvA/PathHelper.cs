@@ -3,7 +3,7 @@ namespace ConvA;
 public static class PathHelper {
     public static string ExpandPath(string path) {
         path = Environment.ExpandEnvironmentVariables(path);
-        if (!path.StartsWith("~")) {
+        if (!path.StartsWith('~')) {
             return Path.GetFullPath(path);
         }
 
