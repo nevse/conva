@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0](https://github.com/nevse/conva/compare/v1.1.2...v1.2.0) (2024-03-26)
+
+
+### Features
+
+* add props reference support (-t props) ([8a77f78](https://github.com/nevse/conva/commit/8a77f78decc445db1dc2e96b2a5722113741b512))
+
 ## [1.1.2](https://github.com/nevse/conva/compare/v1.1.1...v1.1.2) (2023-09-14)
 
 
