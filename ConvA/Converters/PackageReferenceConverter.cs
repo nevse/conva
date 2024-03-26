@@ -8,7 +8,6 @@ public class PackageReferenceConverter : ProjectConverterBase {
     private string Version { get; }
 
     protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<string> assets, List<Reference> references, List<ProjectReference> projectReferences) {
-
         foreach (PackageInfo package in packages) {
             if (package.Id != null) {
                 project.AddOrUpdatePackageReference(package.Id, Version);

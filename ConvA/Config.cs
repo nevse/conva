@@ -4,6 +4,7 @@ namespace ConvA;
 
 public class Config {
     public string? RepositoryPath { get; set; }
+    public string? PropsPath { get; set; } = Path.Combine("xamarin", "Maui", "References");// relative to repository
     public ConversionType? ConversionType { get; set; }
 }
 

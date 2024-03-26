@@ -7,7 +7,7 @@ public abstract class ProjectConverterBase {
 
     protected RepoInfo RepoInfo { get; }
 
-public void Convert(Project project) {
+    public void Convert(Project project) {
         var packageReferences = project.GetPackageReferences().Where(x => x.Name != null && RepoInfo.CanConvertPackage(x.Name)).ToList();
         HashSet<PackageInfo> packages = new();
         foreach (var packageReference in packageReferences) {

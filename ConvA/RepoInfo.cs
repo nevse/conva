@@ -1,9 +1,10 @@
 using System.Text.RegularExpressions;
 using System;
+using System.ComponentModel;
 
 namespace ConvA;
 
-public partial class RepoInfo {
+public partial class RepoInfo(string path, string propsPath) {
     const string ProjectsBasePath = "xamarin/maui";
     const string NuspecBasePath = "nuspec";
 
@@ -11,11 +12,11 @@ public partial class RepoInfo {
     [GeneratedRegex(@"(\d+\.\d+\.\d+)-.*")]
     private static partial Regex VersionRegex();
 
-    public RepoInfo(string path) {
-        BasePath = path;
-    }
+    string BasePath { get; } = path;
 
-    string BasePath { get; }
+    string PropsPath { get; } = propsPath;
+
+    //name, path
     public Dictionary<string, string> ProjectsByNameDictionary { get; } = new();
     public Dictionary<string, PackageInfo> PackagesByNameDictionary { get; } = new();
     public string? DevExpressDataVersion { get; set; }
@@ -60,6 +61,19 @@ public partial class RepoInfo {
     public Dictionary<string, string> GetIosReferences(string packageName) {
         PackageInfo package = PackagesByNameDictionary[packageName];
         return package.ReferencesIos;
+    }
+
+    public List<string> GetPropsImports(string packageName) {
+        List<string> defaultImports = ["DevExpress.Build.props", "DevExpress.Common.props"];
+        List<string> propsImports = [];
+        string basePropsPath = Path.Combine(BasePath, PropsPath);
+        foreach (string import in defaultImports) {
+            string propsPath = Path.Combine(basePropsPath, import);
+            propsImports.Add(propsPath);
+        }
+        string packagePropsPath = Path.Combine(basePropsPath, $"{packageName}.props");
+        propsImports.Add(packagePropsPath);
+        return propsImports;
     }
 
     public IEnumerable<string> CalculateDependencies(string packageReferenceName, HashSet<string>? visited = null) {

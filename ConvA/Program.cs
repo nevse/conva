@@ -57,7 +57,7 @@ class Program {
 
         repositoryPath = PathHelper.ExpandPath(repositoryPath);
         string projectDir = File.Exists(actualProjectPath) ? Path.GetDirectoryName(actualProjectPath)! : actualProjectPath;
-        RepoInfo repoInfo = new(repositoryPath);
+        RepoInfo repoInfo = new(repositoryPath, config?.PropsPath ?? "xamarin/Maui/References");
         repoInfo.Build();
         string actualVersion = String.IsNullOrEmpty(packageVersion) ? repoInfo.GetVersion() : packageVersion;
         ProjectConverterBase converter = type switch {
@@ -65,6 +65,7 @@ class Program {
             ConversionType.Proj2 => new ProjectReferenceConverter(repoInfo, true),
             ConversionType.Dll => new DllReferenceConverter(repoInfo),
             ConversionType.Package => new PackageReferenceConverter(repoInfo, actualVersion),
+            ConversionType.Props => new PropsConverter(repoInfo),
             _ => throw new NotSupportedException($"Conversion type {type} is not supported")
         };
         IEnumerable<string> projectFiles = File.Exists(actualProjectPath) ? new[] { actualProjectPath } : Directory.EnumerateFiles(actualProjectPath, "*.csproj");

@@ -1,11 +1,8 @@
 namespace ConvA;
 
-public class ProjectReferenceConverter : ProjectConverterBase {
-    public ProjectReferenceConverter(RepoInfo repoInfo, bool useRefsForProjectReferences) : base(repoInfo) {
-        UseRefsForProjectReferences = useRefsForProjectReferences;
-    }
-
-    bool UseRefsForProjectReferences { get;}
+public class ProjectReferenceConverter(RepoInfo repoInfo, bool useRefsForProjectReferences)
+    : ProjectConverterBase(repoInfo) {
+    bool UseRefsForProjectReferences { get;} = useRefsForProjectReferences;
 
     protected override void ConvertCore(Project project, HashSet<PackageInfo> packages, List<string> externPackages, List<string> assets, List<Reference> references, List<ProjectReference> projectReferences) {
         Dictionary<string, string> androidReferences = new();

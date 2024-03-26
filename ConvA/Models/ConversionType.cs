@@ -5,4 +5,5 @@ public enum ConversionType: int {
     Proj2,
     Package,
     Dll,
+    Props
 }

@@ -221,6 +221,40 @@ public partial class Project {
         return conditionAttr.Replace(" ", "") == condition?.Replace(" ", "");
     }
 
+    public void AddImports(IEnumerable<string> props) {
+        //add imports to the end of the file in project section
+        XmlNodeList? nodes = Document.SelectNodes("//Import");
+        if (nodes == null || nodes.Count <= 0) {
+            XmlNodeList? projectNodes = Document.SelectNodes("//Project");
+            if (projectNodes == null)
+                throw new EvaluateException("Could not find project node");
+            var projectNode = projectNodes[0];
+            foreach (string prop in props) {
+                XmlElement importNode = Document.CreateElement("Import");
+                importNode.SetAttribute("Project", prop);
+                projectNode?.AppendChild(importNode);
+                Console.WriteLine($"Add import {prop}");
+            }
+        } else {
+            foreach (string prop in props) {
+                bool isExist = false;
+                foreach (XmlNode node in nodes) {
+                    string? include = node.Attributes?["Project"]?.Value;
+                    if (String.Equals(include, prop, StringComparison.InvariantCultureIgnoreCase)) {
+                        isExist = true;
+                        break;
+                    }
+                }
+                if (!isExist) {
+                    XmlElement importNode = Document.CreateElement("Import");
+                    importNode.SetAttribute("Project", prop);
+                    nodes[0]?.ParentNode?.InsertAfter(importNode, nodes[nodes.Count - 1]);
+                    Console.WriteLine($"Add import {prop}");
+                }
+            }
+        }
+
+    }
     public void AddProjectReference(IEnumerable<string> references, string? platform = "", string? repoPath = null) {
         IEnumerable<XmlNode> packageRefNodes = GetItemGroupWithPackageReference();
         string? condition = null;
@@ -330,10 +364,7 @@ public partial class Project {
         }
 
         if (itemGroupNode == null) {
-            XmlNodeList? projectNodes = Document.SelectNodes("//Project");
-            if (projectNodes == null)
-                throw new EvaluateException("Could not find project node");
-            var projectNode = projectNodes[0];
+            XmlNode? projectNode = FindProjectNode();
             projectNode?.AppendChild(refContentNode);
         } else {
             itemGroupNode.InsertAfter(refContentNode, packageRefNodes.Last());
@@ -355,7 +386,23 @@ public partial class Project {
         }
     }
 
-    public bool RemovePackage(string packageName) {
+    private XmlNode? FindProjectNode()
+    {
+        XmlNodeList? projectNodes = Document.SelectNodes("//Project");
+        if (projectNodes == null)
+            throw new EvaluateException("Could not find project node");
+        var projectNode = projectNodes[0];
+        return projectNode;
+    }
+
+    public bool RemovePackages(IEnumerable<string> packageName, bool reportMissed = true) {
+        bool isRemoved = false;
+        foreach (string package in packageName) {
+            isRemoved |= RemovePackage(package, reportMissed);
+        }
+        return isRemoved;
+    }
+    public bool RemovePackage(string packageName, bool reportMissed = true) {
         XmlNodeList? packages = Document.SelectNodes("//ItemGroup/PackageReference");
         bool isRemoved = false;
         if (packages == null)
@@ -368,7 +415,10 @@ public partial class Project {
             node.ParentNode?.RemoveChild(node);
             isRemoved = true;
         }
-        Console.WriteLine($"Remove package {packageName}");
+        if (!isRemoved && !reportMissed)
+            return isRemoved;
+        string status = isRemoved ? "removed" : "missed";
+        Console.WriteLine($"Package {status} {packageName}");
         return isRemoved;
     }
 
@@ -689,6 +739,34 @@ public partial class Project {
             });
         }
         return references;
+    }
+
+    public void AddJsonProjectReference(string s) {
+        XmlNodeList? nodes = Document.SelectNodes("//ItemGroup");
+        if (nodes != null) {
+            foreach (XmlNode node in nodes) {
+                foreach (XmlNode subNode in node.ChildNodes) {
+                    if (String.Equals("DXJsonProjectReference", subNode.Name, StringComparison.InvariantCultureIgnoreCase)) {
+                        string? include = subNode.Attributes?["Include"]?.Value;
+                        if (include == null)
+                            continue;
+                        if (include.Contains(s))
+                            return;
+                    }
+                }
+            }
+        }
+        XmlNode itemGroup = Document.CreateElement("ItemGroup");
+        if (nodes == null || nodes.Count == 0) {
+            var projectNode = FindProjectNode();
+            projectNode?.AppendChild(itemGroup);
+        } else {
+            var lastNode = nodes[^1];
+            lastNode?.ParentNode?.InsertAfter(itemGroup, lastNode);
+        }
+        XmlElement projectReference = Document.CreateElement("DXJsonProjectReference");
+        projectReference.SetAttribute("Include", s);
+        itemGroup.AppendChild(projectReference);
     }
 
     [GeneratedRegex(@"<!--.*?-->", RegexOptions.Singleline)]
