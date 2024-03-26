@@ -6,6 +6,24 @@ ConvA is a command-line tool for converting project references to/from DLL refer
 
 The tool takes a path to a repository, a conversion type, a path to a project to convert, and a version of package reference as arguments. It then converts the project references based on the provided conversion type.
 
+## Installation
+
+There are two ways to install ConvA:
+
+1. **Using .NET CLI**: Clone the repository and build the tool using .NET CLI.
+
+```bash
+git clone https://github.com/yourusername/conva.git
+cd conva
+dotnet build
+```
+
+2. **Using Homebrew**: If you're on a Mac, you can use the Homebrew package manager to install ConvA.
+
+```bash
+brew install nevse/tap/conva
+```
+
 ## Usage
 
 You can run the tool with the following command:
